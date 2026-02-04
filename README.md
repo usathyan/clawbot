@@ -254,7 +254,7 @@ DeskPilot supports multiple VM providers depending on your host platform:
 brew install lume
 
 # Create a macOS VM for testing
-lume create deskpilot-vm --os macos --cpu 4 --memory 8G --disk 64G
+lume create --os macOS --ipsw latest deskpilot-vm
 
 # Start the VM
 lume start deskpilot-vm
