@@ -1,0 +1,70 @@
+# ClawBot Docker Compose Configuration
+# Runs a Windows 11 VM via QEMU for safe sandbox automation
+
+services:
+  windows-vm:
+    image: trycua/cua-qemu-windows:latest
+    container_name: clawbot-windows
+    restart: unless-stopped
+
+    # KVM acceleration (Linux only)
+    devices:
+      - /dev/kvm
+
+    # Port mappings
+    ports:
+      - "8006:8006"   # noVNC web interface
+      - "5900:5900"   # VNC direct access
+      - "5000:5000"   # Cua API endpoint
+      - "3389:3389"   # RDP (optional)
+
+    # Persistent storage
+    volumes:
+      - ./storage:/storage
+      - ./shared:/shared  # Shared folder with host
+
+    # VM configuration
+    environment:
+      # Resources
+      RAM_SIZE: ${CLAWBOT_VM_RAM:-8G}
+      CPU_CORES: ${CLAWBOT_VM_CPUS:-4}
+      DISK_SIZE: ${CLAWBOT_VM_DISK:-64G}
+
+      # Display
+      DISPLAY_WIDTH: 1920
+      DISPLAY_HEIGHT: 1080
+
+      # Windows settings
+      VERSION: "win11"
+      LANGUAGE: "en-US"
+      KEYBOARD: "en-US"
+
+      # Network
+      DHCP: "Y"
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: ${CLAWBOT_VM_RAM:-8G}
+        reservations:
+          memory: 4G
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # Windows takes time to boot
+
+    # Security
+    cap_add:
+      - NET_ADMIN  # For network bridging
+    security_opt:
+      - seccomp:unconfined  # Required for QEMU
+
+# Named volumes for persistence
+volumes:
+  windows-storage:
+    driver: local

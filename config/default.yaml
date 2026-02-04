@@ -1,0 +1,51 @@
+# ClawBot Default Configuration
+# Override by creating config/local.yaml or setting environment variables
+
+# Deployment mode: "vm" (Docker + QEMU) or "native" (direct Windows control)
+deployment:
+  mode: vm  # vm | native
+
+# VM settings (used when mode=vm)
+vm:
+  image: trycua/cua-qemu-windows:latest
+  ram_size: 8G
+  cpu_cores: 4
+  disk_size: 64G
+  vnc_port: 8006
+  api_port: 5000
+  storage_path: ./storage
+
+# Native settings (used when mode=native)
+native:
+  # Screen capture settings
+  screenshot_delay: 0.5  # seconds to wait before capture
+  # Input settings
+  typing_interval: 0.05  # seconds between keystrokes
+  click_pause: 0.1  # seconds after click
+
+# Model settings
+model:
+  provider: ollama
+  name: qwen2.5:3b
+  base_url: http://localhost:11434
+  # Alternative models (comment/uncomment to switch)
+  # name: llama3.2-vision:11b
+  # name: qwen2-vl:7b
+
+# Agent settings
+agent:
+  max_steps: 50  # maximum actions per task
+  screenshot_on_step: true  # capture screen after each action
+  verbose: true  # show detailed reasoning
+
+# OpenClaw integration
+openclaw:
+  enabled: false  # enable when OpenClaw is installed
+  skill_path: ~/.openclaw/skills/computer-use
+  daemon_url: http://localhost:3000
+
+# Logging
+logging:
+  level: INFO  # DEBUG | INFO | WARNING | ERROR
+  file: null  # path to log file, null for stdout only
+  screenshots_dir: ./screenshots  # where to save screenshots
