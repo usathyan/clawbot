@@ -243,23 +243,60 @@ deskpilot skill publish my-skill
 
 ## Deployment Options
 
-### VM Mode (Recommended for Testing)
+> **Important:** DeskPilot runs on your **HOST machine** and controls the **TARGET** (VM or native desktop) remotely via screen capture and input injection. You do NOT install DeskPilot inside the VM.
 
-DeskPilot supports multiple VM providers depending on your host platform:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  HOST MACHINE (where you install DeskPilot)                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ DeskPilot    │  │ Ollama AI    │  │ Cua SDK      │          │
+│  │ CLI          │  │ (qwen2.5)    │  │              │          │
+│  └──────┬───────┘  └──────────────┘  └──────┬───────┘          │
+│         │                                    │                  │
+│         └────────────────┬───────────────────┘                  │
+│                          │ Controls                             │
+│                          ▼                                      │
+│         ┌────────────────────────────────────┐                  │
+│         │  TARGET: VM or Native Desktop      │                  │
+│         │  (Calculator, apps, legacy software)│                  │
+│         └────────────────────────────────────┘                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-#### macOS (Lume - Apple Silicon & Intel)
+---
+
+### Step 1: Install DeskPilot on Your HOST Machine
 
 ```bash
-# Install Lume (macOS virtualization)
+# Clone the repository
+git clone https://github.com/usathyan/deskpilot
+cd deskpilot
+
+# Create virtual environment and install
+make venv
+source .venv/bin/activate
+make install
+
+# Install Ollama and download AI model (~2GB)
+brew install ollama   # or: curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull qwen2.5:3b
+```
+
+---
+
+### Step 2: Set Up Your TARGET (Choose One)
+
+#### Option A: macOS VM via Lume (Apple Silicon & Intel)
+
+```bash
+# Install Lume
 brew install lume
 
-# Create a macOS VM for testing
+# Create and run a macOS VM
 lume create --os macOS --ipsw latest deskpilot-vm
-
-# Start the VM
 lume run deskpilot-vm
 
-# Configure DeskPilot to use it
+# Configure DeskPilot to use the VM
 cat > config/local.yaml << 'EOF'
 deployment:
   mode: vm
@@ -267,18 +304,15 @@ vm:
   os_type: macos
   provider_type: lume
 EOF
-
-# Run DeskPilot
-deskpilot demo
 ```
 
-#### Linux (Docker + QEMU)
+#### Option B: Windows VM via Docker (Linux Host)
 
 ```bash
-# Start Windows VM via Docker Compose
+# Start Windows 11 VM
 docker-compose up -d
 
-# Access via web VNC
+# Access via web browser
 open http://localhost:8006
 
 # Configure DeskPilot
@@ -291,27 +325,27 @@ vm:
 EOF
 ```
 
-#### Windows (Docker Desktop)
-
-```powershell
-# Install Docker Desktop for Windows
-winget install Docker.DockerDesktop
-
-# Start VM
-docker-compose up -d
-
-# Or use native mode directly (no VM needed)
-deskpilot setup --mode native
-```
-
-### Native Mode (Production)
-
-Control the host machine directly without a VM:
+#### Option C: Native Mode (Control Your Own Desktop)
 
 ```bash
-deskpilot setup --mode native
-deskpilot run "Open Outlook and check emails"
+# No VM needed - DeskPilot controls your current machine
+cat > config/local.yaml << 'EOF'
+deployment:
+  mode: native
+EOF
 ```
+
+---
+
+### Step 3: Run DeskPilot
+
+```bash
+# Make sure your VM is running (if using VM mode)
+# Then run the demo from your HOST machine:
+deskpilot demo
+```
+
+---
 
 ### Remote Machine
 
