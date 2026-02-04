@@ -1,4 +1,4 @@
-"""Configuration management for ClawBot."""
+"""Configuration management for DeskPilot."""
 
 import os
 from pathlib import Path
@@ -69,11 +69,11 @@ class LoggingConfig(BaseModel):
     screenshots_dir: str = "./screenshots"
 
 
-class ClawBotConfig(BaseSettings):
-    """Main ClawBot configuration."""
+class DeskPilotConfig(BaseSettings):
+    """Main DeskPilot configuration."""
 
     model_config = SettingsConfigDict(
-        env_prefix="CLAWBOT_",
+        env_prefix="DESKPILOT_",
         env_nested_delimiter="__",
         extra="ignore",
     )
@@ -91,13 +91,13 @@ def find_config_file() -> Path | None:
     """Find the configuration file.
 
     Search order:
-    1. CLAWBOT_CONFIG environment variable
+    1. DESKPILOT_CONFIG environment variable
     2. ./config/local.yaml
     3. ./config/default.yaml
     4. Package default config
     """
     # Check environment variable
-    env_config = os.environ.get("CLAWBOT_CONFIG")
+    env_config = os.environ.get("DESKPILOT_CONFIG")
     if env_config:
         path = Path(env_config)
         if path.exists():
@@ -121,14 +121,14 @@ def find_config_file() -> Path | None:
     return None
 
 
-def load_config(config_path: Path | str | None = None) -> ClawBotConfig:
+def load_config(config_path: Path | str | None = None) -> DeskPilotConfig:
     """Load configuration from YAML file with environment variable overrides.
 
     Args:
         config_path: Path to config file. If None, searches default locations.
 
     Returns:
-        ClawBotConfig instance with merged settings.
+        DeskPilotConfig instance with merged settings.
     """
     config_data = {}
 
@@ -144,10 +144,10 @@ def load_config(config_path: Path | str | None = None) -> ClawBotConfig:
             config_data = yaml.safe_load(f) or {}
 
     # Create config with YAML data as defaults, env vars override
-    return ClawBotConfig(**config_data)
+    return DeskPilotConfig(**config_data)
 
 
-def save_config(config: ClawBotConfig, path: Path | str) -> None:
+def save_config(config: DeskPilotConfig, path: Path | str) -> None:
     """Save configuration to YAML file.
 
     Args:
@@ -164,25 +164,25 @@ def save_config(config: ClawBotConfig, path: Path | str) -> None:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
 
-def get_config() -> ClawBotConfig:
+def get_config() -> DeskPilotConfig:
     """Get the current configuration (singleton pattern).
 
     Returns:
-        ClawBotConfig instance.
+        DeskPilotConfig instance.
     """
     if not hasattr(get_config, "_instance"):
         get_config._instance = load_config()
     return get_config._instance
 
 
-def reload_config(config_path: Path | str | None = None) -> ClawBotConfig:
+def reload_config(config_path: Path | str | None = None) -> DeskPilotConfig:
     """Reload configuration from file.
 
     Args:
         config_path: Path to config file.
 
     Returns:
-        New ClawBotConfig instance.
+        New DeskPilotConfig instance.
     """
     get_config._instance = load_config(config_path)
     return get_config._instance

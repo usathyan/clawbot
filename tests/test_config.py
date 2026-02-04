@@ -5,8 +5,8 @@ from pathlib import Path
 
 import yaml
 
-from clawbot.wizard.config import (
-    ClawBotConfig,
+from deskpilot.wizard.config import (
+    DeskPilotConfig,
     DeploymentConfig,
     ModelConfig,
     VMConfig,
@@ -15,12 +15,12 @@ from clawbot.wizard.config import (
 )
 
 
-class TestClawBotConfig:
-    """Tests for ClawBotConfig model."""
+class TestDeskPilotConfig:
+    """Tests for DeskPilotConfig model."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = ClawBotConfig()
+        config = DeskPilotConfig()
 
         assert config.deployment.mode == "vm"
         assert config.model.provider == "ollama"
@@ -30,7 +30,7 @@ class TestClawBotConfig:
 
     def test_nested_config_override(self):
         """Test overriding nested config values."""
-        config = ClawBotConfig(
+        config = DeskPilotConfig(
             deployment=DeploymentConfig(mode="native"),
             model=ModelConfig(name="llama3.2-vision:11b"),
         )
@@ -40,7 +40,7 @@ class TestClawBotConfig:
 
     def test_vm_config_defaults(self):
         """Test VM configuration defaults."""
-        config = ClawBotConfig()
+        config = DeskPilotConfig()
 
         assert config.vm.ram_size == "8G"
         assert config.vm.cpu_cores == 4
@@ -53,7 +53,7 @@ class TestConfigLoadSave:
 
     def test_save_and_load_config(self):
         """Test saving and loading configuration."""
-        config = ClawBotConfig(
+        config = DeskPilotConfig(
             deployment=DeploymentConfig(mode="native"),
             model=ModelConfig(name="test-model"),
         )
@@ -100,7 +100,7 @@ class TestConfigLoadSave:
         # Set env vars with the CLAWBOT_ prefix
         monkeypatch.setenv("CLAWBOT_DEPLOYMENT__MODE", "native")
 
-        config = ClawBotConfig()
+        config = DeskPilotConfig()
         # Note: env vars are processed by pydantic-settings
         # This test verifies the config accepts the structure
 
@@ -111,12 +111,12 @@ class TestConfigValidation:
     def test_valid_deployment_modes(self):
         """Test valid deployment mode values."""
         for mode in ["vm", "native"]:
-            config = ClawBotConfig(deployment=DeploymentConfig(mode=mode))
+            config = DeskPilotConfig(deployment=DeploymentConfig(mode=mode))
             assert config.deployment.mode == mode
 
     def test_valid_log_levels(self):
         """Test valid log level values."""
-        from clawbot.wizard.config import LoggingConfig
+        from deskpilot.wizard.config import LoggingConfig
 
         for level in ["DEBUG", "INFO", "WARNING", "ERROR"]:
             logging_config = LoggingConfig(level=level)

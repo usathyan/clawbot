@@ -11,8 +11,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from clawbot.cua_bridge.computer import BaseComputer, get_computer
-from clawbot.wizard.config import ClawBotConfig, get_config
+from deskpilot.cua_bridge.computer import BaseComputer, get_computer
+from deskpilot.wizard.config import DeskPilotConfig, get_config
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -48,7 +48,7 @@ class AgentResult:
         return len(self.steps)
 
 
-class ClawBotAgent:
+class DeskPilotAgent:
     """AI Agent that can see and control computers.
 
     Uses Cua's ComputerAgent with Ollama for local inference.
@@ -57,7 +57,7 @@ class ClawBotAgent:
     def __init__(
         self,
         computer: BaseComputer,
-        config: ClawBotConfig | None = None,
+        config: DeskPilotConfig | None = None,
     ) -> None:
         self.computer = computer
         self.config = config or get_config()
@@ -222,7 +222,7 @@ class ClawBotAgent:
 class MockAgent:
     """Mock agent for testing without AI backend."""
 
-    def __init__(self, computer: BaseComputer, config: ClawBotConfig | None = None) -> None:
+    def __init__(self, computer: BaseComputer, config: DeskPilotConfig | None = None) -> None:
         self.computer = computer
         self.config = config or get_config()
         self._initialized = True
@@ -270,10 +270,10 @@ class MockAgent:
         )
 
     def _print_step(self, step: AgentStep) -> None:
-        ClawBotAgent._print_step(self, step)
+        DeskPilotAgent._print_step(self, step)
 
 
-async def create_agent(mock: bool = False) -> ClawBotAgent | MockAgent:
+async def create_agent(mock: bool = False) -> DeskPilotAgent | MockAgent:
     """Create and initialize an agent.
 
     Args:
@@ -289,6 +289,6 @@ async def create_agent(mock: bool = False) -> ClawBotAgent | MockAgent:
     if mock:
         return MockAgent(computer, config)
 
-    agent = ClawBotAgent(computer, config)
+    agent = DeskPilotAgent(computer, config)
     await agent.initialize()
     return agent

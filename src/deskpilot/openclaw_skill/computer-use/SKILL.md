@@ -1,8 +1,8 @@
 ---
 name: computer-use
-description: Control Windows applications through AI-powered automation using ClawBot
+description: Control Windows applications through AI-powered automation using DeskPilot
 version: 0.1.0
-author: ClawBot
+author: DeskPilot
 tags:
   - automation
   - windows
@@ -12,11 +12,11 @@ tags:
 
 # Computer Use Skill
 
-Control Windows desktop applications through natural language commands using ClawBot.
+Control Windows desktop applications through natural language commands using DeskPilot.
 
 ## Prerequisites
 
-- ClawBot installed and configured (`clawbot setup`)
+- DeskPilot installed and configured (`deskpilot setup`)
 - Ollama running with qwen2.5:3b model
 - Either VM mode (Docker) or Native mode (Windows) configured
 
@@ -27,8 +27,8 @@ Control Windows desktop applications through natural language commands using Cla
 Capture the current screen state:
 
 ```bash
-clawbot screenshot --save
-clawbot screenshot --describe  # Get AI description
+deskpilot screenshot --save
+deskpilot screenshot --describe  # Get AI description
 ```
 
 ### Click
@@ -36,9 +36,9 @@ clawbot screenshot --describe  # Get AI description
 Click at coordinates or on elements:
 
 ```bash
-clawbot click 500 300              # Click at x=500, y=300
-clawbot click 500 300 --double     # Double-click
-clawbot click --button right       # Right-click
+deskpilot click 500 300              # Click at x=500, y=300
+deskpilot click 500 300 --double     # Double-click
+deskpilot click --button right       # Right-click
 ```
 
 ### Type
@@ -46,8 +46,8 @@ clawbot click --button right       # Right-click
 Type text into the focused element:
 
 ```bash
-clawbot type "Hello, World!"
-clawbot type "user@example.com"
+deskpilot type "Hello, World!"
+deskpilot type "user@example.com"
 ```
 
 ### Launch
@@ -55,9 +55,9 @@ clawbot type "user@example.com"
 Launch an application:
 
 ```bash
-clawbot launch Calculator
-clawbot launch Notepad
-clawbot launch "Microsoft Edge"
+deskpilot launch Calculator
+deskpilot launch Notepad
+deskpilot launch "Microsoft Edge"
 ```
 
 ### Press Key
@@ -65,9 +65,9 @@ clawbot launch "Microsoft Edge"
 Press a single key:
 
 ```bash
-clawbot press enter
-clawbot press escape
-clawbot press tab
+deskpilot press enter
+deskpilot press escape
+deskpilot press tab
 ```
 
 ### Hotkey
@@ -75,10 +75,10 @@ clawbot press tab
 Press a key combination:
 
 ```bash
-clawbot hotkey ctrl c        # Copy
-clawbot hotkey ctrl v        # Paste
-clawbot hotkey alt f4        # Close window
-clawbot hotkey ctrl shift s  # Save as
+deskpilot hotkey ctrl c        # Copy
+deskpilot hotkey ctrl v        # Paste
+deskpilot hotkey alt f4        # Close window
+deskpilot hotkey ctrl shift s  # Save as
 ```
 
 ### Run Task
@@ -86,9 +86,9 @@ clawbot hotkey ctrl shift s  # Save as
 Execute an AI-controlled task with natural language:
 
 ```bash
-clawbot run "Open Calculator and compute 15 * 8"
-clawbot run "Find and click the Settings button"
-clawbot run "Type 'Hello' in the search box and press Enter"
+deskpilot run "Open Calculator and compute 15 * 8"
+deskpilot run "Find and click the Settings button"
+deskpilot run "Type 'Hello' in the search box and press Enter"
 ```
 
 ## Example Workflows
@@ -97,37 +97,37 @@ clawbot run "Type 'Hello' in the search box and press Enter"
 
 ```bash
 # Launch Calculator
-clawbot launch Calculator
+deskpilot launch Calculator
 
 # Wait for it to open
 sleep 2
 
 # Compute 15 * 8
-clawbot run "Click the buttons to compute 15 times 8"
+deskpilot run "Click the buttons to compute 15 times 8"
 
 # Or use direct commands
-clawbot type "15*8"
-clawbot press enter
+deskpilot type "15*8"
+deskpilot press enter
 ```
 
 ### File Operations
 
 ```bash
 # Open File Explorer
-clawbot hotkey win e
+deskpilot hotkey win e
 
 # Navigate and create folder
-clawbot run "Navigate to Documents and create a new folder called 'Test'"
+deskpilot run "Navigate to Documents and create a new folder called 'Test'"
 ```
 
 ### Web Automation
 
 ```bash
 # Open browser
-clawbot launch "Microsoft Edge"
+deskpilot launch "Microsoft Edge"
 
 # Navigate to URL
-clawbot run "Go to github.com and search for ClawBot"
+deskpilot run "Go to github.com and search for DeskPilot"
 ```
 
 ## Interactive Demo
@@ -135,7 +135,7 @@ clawbot run "Go to github.com and search for ClawBot"
 Run the interactive calculator demo:
 
 ```bash
-clawbot demo
+deskpilot demo
 ```
 
 This launches Calculator and lets you enter calculations that the AI performs.
@@ -145,7 +145,7 @@ This launches Calculator and lets you enter calculations that the AI performs.
 View current configuration:
 
 ```bash
-clawbot config
+deskpilot config
 ```
 
 Key settings in `config/local.yaml`:
@@ -190,7 +190,7 @@ ollama pull qwen2.5:3b
 ```bash
 # Check screen capture permissions (macOS/Linux)
 # On Windows, run as administrator if needed
-clawbot screenshot --mock  # Test with mock mode
+deskpilot screenshot --mock  # Test with mock mode
 ```
 
 ## Integration with OpenClaw
@@ -204,7 +204,7 @@ openclaw
 
 The skill will automatically:
 1. Parse your request
-2. Execute the appropriate clawbot commands
+2. Execute the appropriate deskpilot commands
 3. Return the results
 
 ## API Reference
@@ -212,13 +212,13 @@ The skill will automatically:
 All commands support `--mock` flag for testing without actual computer control:
 
 ```bash
-clawbot screenshot --mock
-clawbot click 100 100 --mock
-clawbot run "test task" --mock
+deskpilot screenshot --mock
+deskpilot click 100 100 --mock
+deskpilot run "test task" --mock
 ```
 
 Check dependencies:
 
 ```bash
-clawbot status
+deskpilot status
 ```

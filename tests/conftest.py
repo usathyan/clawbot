@@ -2,14 +2,14 @@
 
 import pytest
 
-from clawbot.cua_bridge.computer import MockComputer
-from clawbot.wizard.config import ClawBotConfig
+from deskpilot.cua_bridge.computer import MockComputer
+from deskpilot.wizard.config import DeskPilotConfig
 
 
 @pytest.fixture
 def config():
-    """Create a default ClawBotConfig."""
-    return ClawBotConfig()
+    """Create a default DeskPilotConfig."""
+    return DeskPilotConfig()
 
 
 @pytest.fixture

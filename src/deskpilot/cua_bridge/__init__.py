@@ -1,8 +1,8 @@
 """Cua SDK bridge for computer control."""
 
-from clawbot.cua_bridge.actions import ActionResult, Actions, ScreenshotResult, create_actions
-from clawbot.cua_bridge.agent import AgentResult, AgentStep, ClawBotAgent, MockAgent, create_agent
-from clawbot.cua_bridge.computer import (
+from deskpilot.cua_bridge.actions import ActionResult, Actions, ScreenshotResult, create_actions
+from deskpilot.cua_bridge.agent import AgentResult, AgentStep, DeskPilotAgent, MockAgent, create_agent
+from deskpilot.cua_bridge.computer import (
     BaseComputer,
     MockComputer,
     NativeComputer,
@@ -23,7 +23,7 @@ __all__ = [
     "ScreenshotResult",
     "create_actions",
     # Agent
-    "ClawBotAgent",
+    "DeskPilotAgent",
     "MockAgent",
     "AgentStep",
     "AgentResult",

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from clawbot.wizard.setup import check_dependencies, detect_environment
+from deskpilot.wizard.setup import check_dependencies, detect_environment
 
 
 class TestDetectEnvironment:
@@ -47,7 +47,7 @@ class TestCheckDependencies:
     async def test_check_dependencies_returns_dict(self):
         """Test that check_dependencies returns expected keys."""
         # Capture console output
-        with patch("clawbot.wizard.setup.console"):
+        with patch("deskpilot.wizard.setup.console"):
             results = await check_dependencies()
 
         assert isinstance(results, dict)
@@ -61,7 +61,7 @@ class TestCheckDependencies:
     @pytest.mark.asyncio
     async def test_python_version_check(self):
         """Test Python version requirement check."""
-        with patch("clawbot.wizard.setup.console"):
+        with patch("deskpilot.wizard.setup.console"):
             results = await check_dependencies()
 
         # We're running on Python 3.12+, so this should be True
@@ -72,7 +72,7 @@ class TestCheckDependencies:
     @pytest.mark.asyncio
     async def test_os_detection_flags(self):
         """Test OS detection flags are mutually exclusive."""
-        with patch("clawbot.wizard.setup.console"):
+        with patch("deskpilot.wizard.setup.console"):
             results = await check_dependencies()
 
         os_flags = [results["is_windows"], results["is_macos"], results["is_linux"]]
@@ -98,9 +98,9 @@ class TestSetupWizardFlow:
         """Test wizard flow with mocked user input."""
         # This is a smoke test - full integration would require
         # mocking Rich prompts and console
-        with patch("clawbot.wizard.setup.console"):
-            with patch("clawbot.wizard.setup.Prompt") as mock_prompt:
-                with patch("clawbot.wizard.setup.Confirm") as mock_confirm:
+        with patch("deskpilot.wizard.setup.console"):
+            with patch("deskpilot.wizard.setup.Prompt") as mock_prompt:
+                with patch("deskpilot.wizard.setup.Confirm") as mock_confirm:
                     mock_prompt.ask.return_value = "vm"
                     mock_confirm.ask.return_value = False
 
@@ -118,7 +118,7 @@ class TestSkillInstallation:
         skill_source = (
             Path(__file__).parent.parent
             / "src"
-            / "clawbot"
+            / "deskpilot"
             / "openclaw_skill"
             / "computer-use"
         )
@@ -132,7 +132,7 @@ class TestSkillInstallation:
         skill_path = (
             Path(__file__).parent.parent
             / "src"
-            / "clawbot"
+            / "deskpilot"
             / "openclaw_skill"
             / "computer-use"
             / "SKILL.md"
@@ -143,7 +143,7 @@ class TestSkillInstallation:
 
             # Check for required sections
             assert "name: computer-use" in content
-            assert "clawbot" in content.lower()
+            assert "deskpilot" in content.lower()
             assert "screenshot" in content.lower()
             assert "click" in content.lower()
 
@@ -154,7 +154,7 @@ class TestDemoModule:
     @pytest.mark.asyncio
     async def test_demo_import(self):
         """Test that demo module imports correctly."""
-        from clawbot.wizard.demo import run_calculator_demo, run_quick_demo
+        from deskpilot.wizard.demo import run_calculator_demo, run_quick_demo
 
         assert callable(run_calculator_demo)
         assert callable(run_quick_demo)
@@ -162,10 +162,10 @@ class TestDemoModule:
     @pytest.mark.asyncio
     async def test_quick_demo_mock_mode(self):
         """Test quick demo in mock mode doesn't crash."""
-        from clawbot.wizard.demo import run_quick_demo
+        from deskpilot.wizard.demo import run_quick_demo
 
         # Suppress console output
-        with patch("clawbot.wizard.demo.console"):
-            with patch("clawbot.cua_bridge.agent.console"):
+        with patch("deskpilot.wizard.demo.console"):
+            with patch("deskpilot.cua_bridge.agent.console"):
                 # Should complete without error in mock mode
                 await run_quick_demo(mock=True)

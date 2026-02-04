@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from PIL import Image
 
-from clawbot.cua_bridge.computer import BaseComputer
-from clawbot.wizard.config import ClawBotConfig, get_config
+from deskpilot.cua_bridge.computer import BaseComputer
+from deskpilot.wizard.config import DeskPilotConfig, get_config
 
 
 @dataclass
@@ -48,7 +48,7 @@ class Actions:
     """High-level actions for computer automation."""
 
     def __init__(
-        self, computer: BaseComputer, config: ClawBotConfig | None = None
+        self, computer: BaseComputer, config: DeskPilotConfig | None = None
     ) -> None:
         self.computer = computer
         self.config = config or get_config()
@@ -290,7 +290,7 @@ async def create_actions(mock: bool = False) -> Actions:
     Returns:
         Connected Actions instance.
     """
-    from clawbot.cua_bridge.computer import get_computer
+    from deskpilot.cua_bridge.computer import get_computer
 
     config = get_config()
     computer = get_computer(config, mock=mock)

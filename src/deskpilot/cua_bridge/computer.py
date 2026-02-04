@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from clawbot.wizard.config import ClawBotConfig, get_config
+from deskpilot.wizard.config import DeskPilotConfig, get_config
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -81,7 +81,7 @@ class BaseComputer(ABC):
 class VMComputer(BaseComputer):
     """Computer control via Cua VM (Docker + QEMU)."""
 
-    def __init__(self, config: ClawBotConfig) -> None:
+    def __init__(self, config: DeskPilotConfig) -> None:
         self.config = config
         self._computer = None
         self._interface = None
@@ -179,7 +179,7 @@ class VMComputer(BaseComputer):
 class NativeComputer(BaseComputer):
     """Computer control via native OS APIs (pyautogui + mss)."""
 
-    def __init__(self, config: ClawBotConfig) -> None:
+    def __init__(self, config: DeskPilotConfig) -> None:
         self.config = config
         self._connected = False
         self._pyautogui = None
@@ -284,7 +284,7 @@ class NativeComputer(BaseComputer):
 class MockComputer(BaseComputer):
     """Mock computer for testing without actual VM or native control."""
 
-    def __init__(self, config: ClawBotConfig) -> None:
+    def __init__(self, config: DeskPilotConfig) -> None:
         self.config = config
         self._connected = False
         self.actions: list[dict] = []  # Record actions for testing
@@ -327,7 +327,7 @@ class MockComputer(BaseComputer):
         return self._connected
 
 
-def get_computer(config: ClawBotConfig | None = None, mock: bool = False) -> BaseComputer:
+def get_computer(config: DeskPilotConfig | None = None, mock: bool = False) -> BaseComputer:
     """Factory function to create appropriate Computer instance.
 
     Args:

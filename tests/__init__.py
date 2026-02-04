@@ -1,1 +1,1 @@
-"""ClawBot test suite."""
+"""DeskPilot test suite."""

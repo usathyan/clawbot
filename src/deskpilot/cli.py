@@ -1,4 +1,4 @@
-"""ClawBot CLI - AI-powered Windows automation."""
+"""DeskPilot CLI - AI-powered Windows automation."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from clawbot import __version__
+from deskpilot import __version__
 
 console = Console()
 
@@ -27,17 +27,17 @@ def async_command(f):
 
 
 @click.group()
-@click.version_option(version=__version__, prog_name="clawbot")
+@click.version_option(version=__version__, prog_name="deskpilot")
 @click.option("--config", "-c", type=click.Path(exists=True), help="Path to config file")
 @click.pass_context
 def cli(ctx: click.Context, config: str | None) -> None:
-    """ClawBot - AI-powered Windows automation with OpenClaw + Cua.
+    """DeskPilot - AI-powered Windows automation with OpenClaw + Cua.
 
     Control Windows applications through natural language using local AI models.
     """
     ctx.ensure_object(dict)
     if config:
-        from clawbot.wizard.config import reload_config
+        from deskpilot.wizard.config import reload_config
 
         reload_config(config)
 
@@ -48,9 +48,9 @@ def cli(ctx: click.Context, config: str | None) -> None:
 async def setup(ctx: click.Context) -> None:
     """Run the interactive setup wizard.
 
-    Guides you through configuring ClawBot for your environment.
+    Guides you through configuring DeskPilot for your environment.
     """
-    from clawbot.wizard.setup import run_setup_wizard
+    from deskpilot.wizard.setup import run_setup_wizard
 
     await run_setup_wizard()
 
@@ -64,7 +64,7 @@ async def demo(ctx: click.Context, mock: bool) -> None:
 
     Demonstrates AI-controlled automation with the Windows Calculator.
     """
-    from clawbot.wizard.demo import run_calculator_demo
+    from deskpilot.wizard.demo import run_calculator_demo
 
     await run_calculator_demo(mock=mock)
 
@@ -82,11 +82,11 @@ async def screenshot(
     """Capture a screenshot of the controlled computer.
 
     Examples:
-        clawbot screenshot --save
-        clawbot screenshot --describe
-        clawbot screenshot -s -o ./my_screenshot.png
+        deskpilot screenshot --save
+        deskpilot screenshot --describe
+        deskpilot screenshot -s -o ./my_screenshot.png
     """
-    from clawbot.cua_bridge import create_actions
+    from deskpilot.cua_bridge import create_actions
 
     actions = await create_actions(mock=mock)
 
@@ -132,11 +132,11 @@ async def click_cmd(
     """Click at coordinates or on a target element.
 
     Examples:
-        clawbot click 500 300
-        clawbot click 500 300 --button right
-        clawbot click --target "OK" (requires AI agent)
+        deskpilot click 500 300
+        deskpilot click 500 300 --button right
+        deskpilot click --target "OK" (requires AI agent)
     """
-    from clawbot.cua_bridge import create_actions
+    from deskpilot.cua_bridge import create_actions
 
     if x is None and y is None and target is None:
         console.print("[red]Error:[/red] Specify coordinates (x y) or --target")
@@ -173,10 +173,10 @@ async def type_cmd(ctx: click.Context, text: str, mock: bool) -> None:
     """Type text into the focused element.
 
     Examples:
-        clawbot type "Hello, World!"
-        clawbot type "user@example.com"
+        deskpilot type "Hello, World!"
+        deskpilot type "user@example.com"
     """
-    from clawbot.cua_bridge import create_actions
+    from deskpilot.cua_bridge import create_actions
 
     actions = await create_actions(mock=mock)
 
@@ -203,11 +203,11 @@ async def launch(ctx: click.Context, app: str, mock: bool) -> None:
     Uses the Start menu search on Windows.
 
     Examples:
-        clawbot launch Calculator
-        clawbot launch Notepad
-        clawbot launch "Microsoft Edge"
+        deskpilot launch Calculator
+        deskpilot launch Notepad
+        deskpilot launch "Microsoft Edge"
     """
-    from clawbot.cua_bridge import create_actions
+    from deskpilot.cua_bridge import create_actions
 
     actions = await create_actions(mock=mock)
 
@@ -233,11 +233,11 @@ async def press(ctx: click.Context, key: str, mock: bool) -> None:
     """Press a keyboard key.
 
     Examples:
-        clawbot press enter
-        clawbot press escape
-        clawbot press tab
+        deskpilot press enter
+        deskpilot press escape
+        deskpilot press tab
     """
-    from clawbot.cua_bridge import create_actions
+    from deskpilot.cua_bridge import create_actions
 
     actions = await create_actions(mock=mock)
 
@@ -262,11 +262,11 @@ async def hotkey(ctx: click.Context, keys: tuple, mock: bool) -> None:
     """Press a key combination.
 
     Examples:
-        clawbot hotkey ctrl c
-        clawbot hotkey ctrl shift escape
-        clawbot hotkey alt f4
+        deskpilot hotkey ctrl c
+        deskpilot hotkey ctrl shift escape
+        deskpilot hotkey alt f4
     """
-    from clawbot.cua_bridge import create_actions
+    from deskpilot.cua_bridge import create_actions
 
     actions = await create_actions(mock=mock)
 
@@ -294,10 +294,10 @@ async def run(ctx: click.Context, task: str, verbose: bool, mock: bool) -> None:
     The AI agent will analyze the screen and perform actions to complete the task.
 
     Examples:
-        clawbot run "Open Calculator and compute 15 * 8"
-        clawbot run "Find and click the Settings button"
+        deskpilot run "Open Calculator and compute 15 * 8"
+        deskpilot run "Find and click the Settings button"
     """
-    from clawbot.cua_bridge import create_agent
+    from deskpilot.cua_bridge import create_agent
 
     console.print(f"[blue]Task:[/blue] {task}")
     console.print()
@@ -323,12 +323,12 @@ async def run(ctx: click.Context, task: str, verbose: bool, mock: bool) -> None:
 @click.pass_context
 def config(ctx: click.Context) -> None:
     """Show current configuration."""
-    from clawbot.wizard.config import find_config_file, get_config
+    from deskpilot.wizard.config import find_config_file, get_config
 
     cfg = get_config()
     config_file = find_config_file()
 
-    table = Table(title="ClawBot Configuration")
+    table = Table(title="DeskPilot Configuration")
     table.add_column("Setting", style="cyan")
     table.add_column("Value", style="green")
 
@@ -354,8 +354,8 @@ def config(ctx: click.Context) -> None:
 @cli.command()
 @click.pass_context
 def status(ctx: click.Context) -> None:
-    """Check the status of ClawBot dependencies."""
-    from clawbot.wizard.setup import check_dependencies
+    """Check the status of DeskPilot dependencies."""
+    from deskpilot.wizard.setup import check_dependencies
 
     asyncio.run(check_dependencies())
 

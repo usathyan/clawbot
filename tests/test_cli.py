@@ -4,7 +4,7 @@
 import pytest
 from click.testing import CliRunner
 
-from clawbot.cli import cli
+from deskpilot.cli import cli
 
 
 class TestCLI:
@@ -20,7 +20,7 @@ class TestCLI:
         result = runner.invoke(cli, ["--help"])
 
         assert result.exit_code == 0
-        assert "ClawBot" in result.output
+        assert "DeskPilot" in result.output
         assert "setup" in result.output
         assert "demo" in result.output
         assert "screenshot" in result.output
@@ -30,7 +30,7 @@ class TestCLI:
         result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
-        assert "clawbot" in result.output.lower()
+        assert "deskpilot" in result.output.lower()
 
     def test_config_command(self, runner):
         """Test config command displays settings."""

@@ -1,22 +1,42 @@
-.PHONY: help install clean test lint format run venv setup demo
+.PHONY: help install clean test lint format run venv setup demo check build release shell status screenshot config
 
 # Default target
 help:
-	@echo "ClawBot - AI-powered Windows automation"
+	@echo "DeskPilot - AI-powered desktop automation"
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
-	@echo "Targets:"
-	@echo "  help     Show this help message"
-	@echo "  venv     Create virtual environment with uv"
-	@echo "  install  Install dependencies"
-	@echo "  clean    Remove build artifacts and cache"
-	@echo "  test     Run tests with pytest"
-	@echo "  lint     Run linter (ruff)"
-	@echo "  format   Format code (ruff format)"
-	@echo "  run      Run the main application"
-	@echo "  setup    Run interactive setup wizard"
-	@echo "  demo     Run the Calculator demo"
+	@echo "Development:"
+	@echo "  venv           Create virtual environment with uv"
+	@echo "  install        Install dependencies"
+	@echo "  install-native Install with native Windows support"
+	@echo "  clean          Remove build artifacts and cache"
+	@echo ""
+	@echo "Quality:"
+	@echo "  test           Run tests with pytest"
+	@echo "  lint           Run linter (ruff)"
+	@echo "  format         Format code (ruff format)"
+	@echo "  typecheck      Run type checking (mypy)"
+	@echo "  check          Run all quality checks"
+	@echo ""
+	@echo "Running:"
+	@echo "  run            Show help"
+	@echo "  setup          Run interactive setup wizard"
+	@echo "  demo           Run the Calculator demo"
+	@echo "  status         Check system status"
+	@echo "  config         Show current configuration"
+	@echo "  screenshot     Take a screenshot"
+	@echo "  shell          Open Python shell with deskpilot"
+	@echo ""
+	@echo "VM Management:"
+	@echo "  vm-up          Start Windows VM (Docker)"
+	@echo "  vm-down        Stop Windows VM"
+	@echo "  vm-logs        View VM logs"
+	@echo "  pull-model     Download Ollama model"
+	@echo ""
+	@echo "Packaging:"
+	@echo "  build          Build package"
+	@echo "  release        Build release tarball"
 	@echo ""
 
 # Create virtual environment
@@ -47,7 +67,7 @@ clean:
 
 # Run tests
 test:
-	pytest tests/ -v --cov=src/clawbot --cov-report=term-missing
+	pytest tests/ -v --cov=src/deskpilot --cov-report=term-missing
 
 # Run linter
 lint:
@@ -61,19 +81,47 @@ format:
 
 # Type checking
 typecheck:
-	mypy src/clawbot/
+	mypy src/deskpilot/
 
 # Run the main application
 run:
-	clawbot --help
+	deskpilot --help
 
 # Run setup wizard
 setup:
-	clawbot setup
+	deskpilot setup
 
 # Run demo
 demo:
-	clawbot demo
+	deskpilot demo
+
+# Show configuration
+config:
+	deskpilot config
+
+# Check system status
+status:
+	deskpilot status
+
+# Take a screenshot
+screenshot:
+	deskpilot screenshot --save
+
+# Open Python shell with deskpilot
+shell:
+	.venv/bin/python -c "from deskpilot.wizard.config import get_config; print('Config loaded:', get_config()); import code; code.interact(local=locals())"
+
+# Run all quality checks
+check: lint typecheck test
+	@echo "All checks passed!"
+
+# Build package
+build:
+	uv build
+
+# Build release tarball
+release: clean build
+	@echo "Release built in dist/"
 
 # Pull required Ollama model
 pull-model:

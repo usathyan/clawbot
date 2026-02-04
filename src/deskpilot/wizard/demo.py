@@ -1,4 +1,4 @@
-"""Calculator demo for ClawBot."""
+"""Calculator demo for DeskPilot."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 
-from clawbot.cua_bridge import create_actions, create_agent
-from clawbot.wizard.config import get_config
+from deskpilot.cua_bridge import create_actions, create_agent
+from deskpilot.wizard.config import get_config
 
 console = Console()
 
@@ -22,7 +22,7 @@ async def run_calculator_demo(mock: bool = False) -> None:
     """
     console.print(
         Panel(
-            "[bold blue]ClawBot Calculator Demo[/bold blue]\n\n"
+            "[bold blue]DeskPilot Calculator Demo[/bold blue]\n\n"
             "This demo shows AI-controlled Windows automation.\n"
             "The agent will launch Calculator and perform calculations.",
             expand=False,

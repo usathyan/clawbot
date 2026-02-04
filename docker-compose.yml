@@ -1,10 +1,10 @@
-# ClawBot Docker Compose Configuration
+# DeskPilot Docker Compose Configuration
 # Runs a Windows 11 VM via QEMU for safe sandbox automation
 
 services:
   windows-vm:
     image: trycua/cua-qemu-windows:latest
-    container_name: clawbot-windows
+    container_name: deskpilot-windows
     restart: unless-stopped
 
     # KVM acceleration (Linux only)
@@ -26,9 +26,9 @@ services:
     # VM configuration
     environment:
       # Resources
-      RAM_SIZE: ${CLAWBOT_VM_RAM:-8G}
-      CPU_CORES: ${CLAWBOT_VM_CPUS:-4}
-      DISK_SIZE: ${CLAWBOT_VM_DISK:-64G}
+      RAM_SIZE: ${DESKPILOT_VM_RAM:-8G}
+      CPU_CORES: ${DESKPILOT_VM_CPUS:-4}
+      DISK_SIZE: ${DESKPILOT_VM_DISK:-64G}
 
       # Display
       DISPLAY_WIDTH: 1920
@@ -46,7 +46,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: ${CLAWBOT_VM_RAM:-8G}
+          memory: ${DESKPILOT_VM_RAM:-8G}
         reservations:
           memory: 4G
 

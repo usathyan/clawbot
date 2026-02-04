@@ -2,14 +2,14 @@
 
 import pytest
 
-from clawbot.cua_bridge.actions import ActionResult, Actions, ScreenshotResult
-from clawbot.cua_bridge.agent import AgentResult, AgentStep, MockAgent
-from clawbot.cua_bridge.computer import (
+from deskpilot.cua_bridge.actions import ActionResult, Actions, ScreenshotResult
+from deskpilot.cua_bridge.agent import AgentResult, AgentStep, MockAgent
+from deskpilot.cua_bridge.computer import (
     MockComputer,
     ScreenInfo,
     get_computer,
 )
-from clawbot.wizard.config import ClawBotConfig
+from deskpilot.wizard.config import DeskPilotConfig
 
 
 class TestMockComputer:
@@ -18,7 +18,7 @@ class TestMockComputer:
     @pytest.fixture
     def computer(self):
         """Create a MockComputer instance."""
-        config = ClawBotConfig()
+        config = DeskPilotConfig()
         return MockComputer(config)
 
     @pytest.mark.asyncio
@@ -110,22 +110,22 @@ class TestGetComputer:
 
     def test_get_vm_computer_type(self):
         """Test that VM mode returns VMComputer type."""
-        config = ClawBotConfig()
+        config = DeskPilotConfig()
         config.deployment.mode = "vm"
 
         computer = get_computer(config, mock=False)
 
-        from clawbot.cua_bridge.computer import VMComputer
+        from deskpilot.cua_bridge.computer import VMComputer
         assert isinstance(computer, VMComputer)
 
     def test_get_native_computer_type(self):
         """Test that native mode returns NativeComputer type."""
-        config = ClawBotConfig()
+        config = DeskPilotConfig()
         config.deployment.mode = "native"
 
         computer = get_computer(config, mock=False)
 
-        from clawbot.cua_bridge.computer import NativeComputer
+        from deskpilot.cua_bridge.computer import NativeComputer
         assert isinstance(computer, NativeComputer)
 
 
@@ -135,7 +135,7 @@ class TestActions:
     @pytest.fixture
     def actions(self):
         """Create Actions with MockComputer."""
-        config = ClawBotConfig()
+        config = DeskPilotConfig()
         computer = MockComputer(config)
         return Actions(computer, config)
 
@@ -213,7 +213,7 @@ class TestMockAgent:
     @pytest.fixture
     def agent(self):
         """Create a MockAgent instance."""
-        config = ClawBotConfig()
+        config = DeskPilotConfig()
         computer = MockComputer(config)
         return MockAgent(computer, config)
 

@@ -1,4 +1,4 @@
-"""Interactive setup wizard for ClawBot."""
+"""Interactive setup wizard for DeskPilot."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
-from clawbot.wizard.config import ClawBotConfig, save_config
+from deskpilot.wizard.config import DeskPilotConfig, save_config
 
 console = Console()
 
@@ -207,8 +207,8 @@ async def run_setup_wizard() -> None:
     """Run the interactive setup wizard."""
     console.print(
         Panel(
-            "[bold blue]ClawBot Setup Wizard[/bold blue]\n\n"
-            "This wizard will help you configure ClawBot for your environment.",
+            "[bold blue]DeskPilot Setup Wizard[/bold blue]\n\n"
+            "This wizard will help you configure DeskPilot for your environment.",
             expand=False,
         )
     )
@@ -250,7 +250,7 @@ async def run_setup_wizard() -> None:
     )
 
     # Create config
-    config = ClawBotConfig()
+    config = DeskPilotConfig()
     config.deployment.mode = mode
 
     # VM-specific setup
@@ -344,8 +344,8 @@ async def run_setup_wizard() -> None:
             f"Model: {config.model.provider}/{config.model.name}\n\n"
             f"Next steps:\n"
             f"  1. {'Start VM: make vm-up' if mode == 'vm' else 'Ensure Windows is running'}\n"
-            f"  2. Run demo: clawbot demo\n"
-            f"  3. Or try: clawbot run 'Open Calculator'",
+            f"  2. Run demo: deskpilot demo\n"
+            f"  3. Or try: deskpilot run 'Open Calculator'",
             expand=False,
         )
     )

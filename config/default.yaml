@@ -1,4 +1,4 @@
-# ClawBot Default Configuration
+# DeskPilot Default Configuration
 # Override by creating config/local.yaml or setting environment variables
 
 # Deployment mode: "vm" (Cua VM) or "native" (direct control)
