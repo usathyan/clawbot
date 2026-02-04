@@ -1,34 +1,42 @@
-# DeskPilot Docker Compose Configuration
-# Runs a Windows 11 VM via QEMU for safe sandbox automation
+# DeskPilot Demo Environment
+# Self-contained Windows 11 VM with DeskPilot pre-installed
+#
+# Quick Start:
+#   docker-compose up -d
+#   Open browser to http://localhost:8006
+#
+# The VM includes:
+#   - Windows 11
+#   - Ollama + qwen2.5:3b model (pre-loaded)
+#   - DeskPilot (pre-installed)
+#   - OpenClaw TUI (auto-starts on login)
+#   - Calculator pinned to taskbar for demo
 
 services:
-  windows-vm:
-    image: trycua/cua-qemu-windows:latest
-    container_name: deskpilot-windows
+  deskpilot-demo:
+    image: deskpilot/demo:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.demo
+    container_name: deskpilot-demo
     restart: unless-stopped
-
-    # KVM acceleration (Linux only)
-    devices:
-      - /dev/kvm
 
     # Port mappings
     ports:
-      - "8006:8006"   # noVNC web interface
-      - "5900:5900"   # VNC direct access
-      - "5000:5000"   # Cua API endpoint
-      - "3389:3389"   # RDP (optional)
+      - "8006:8006"   # noVNC web interface (access via browser)
+      - "5900:5900"   # VNC direct access (optional)
 
     # Persistent storage
     volumes:
-      - ./storage:/storage
-      - ./shared:/shared  # Shared folder with host
+      - deskpilot-storage:/storage
+      - ./shared:/shared  # Share files with host
 
     # VM configuration
     environment:
       # Resources
-      RAM_SIZE: ${DESKPILOT_VM_RAM:-8G}
-      CPU_CORES: ${DESKPILOT_VM_CPUS:-4}
-      DISK_SIZE: ${DESKPILOT_VM_DISK:-64G}
+      RAM_SIZE: ${DESKPILOT_RAM:-8G}
+      CPU_CORES: ${DESKPILOT_CPUS:-4}
+      DISK_SIZE: ${DESKPILOT_DISK:-64G}
 
       # Display
       DISPLAY_WIDTH: 1920
@@ -39,32 +47,32 @@ services:
       LANGUAGE: "en-US"
       KEYBOARD: "en-US"
 
-      # Network
-      DHCP: "Y"
-
     # Resource limits
     deploy:
       resources:
         limits:
-          memory: ${DESKPILOT_VM_RAM:-8G}
+          memory: ${DESKPILOT_RAM:-8G}
         reservations:
           memory: 4G
 
-    # Health check
+    # Health check (wait for VNC to be ready)
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8006"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 120s  # Windows takes time to boot
+      retries: 5
+      start_period: 180s  # Windows takes time to boot
 
-    # Security
-    cap_add:
-      - NET_ADMIN  # For network bridging
+    # Security options for QEMU
     security_opt:
-      - seccomp:unconfined  # Required for QEMU
+      - seccomp:unconfined
 
-# Named volumes for persistence
+    # KVM acceleration (Linux only - optional)
+    # Uncomment if running on Linux with KVM support:
+    # devices:
+    #   - /dev/kvm
+
+# Persistent volume for VM disk
 volumes:
-  windows-storage:
+  deskpilot-storage:
     driver: local

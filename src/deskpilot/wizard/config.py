@@ -9,32 +9,12 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class VMConfig(BaseModel):
-    """VM deployment configuration."""
-
-    os_type: Literal["macos", "linux", "windows", "android"] = "macos"
-    provider_type: Literal["lume", "docker", "cloud"] = "lume"
-    display: str = "1920x1080"
-    ram_size: str = "8G"
-    cpu_cores: int = 4
-    disk_size: str = "64G"
-    vnc_port: int = 8006
-    api_port: int = 5000
-    storage_path: str = "./storage"
-
-
 class NativeConfig(BaseModel):
-    """Native Windows deployment configuration."""
+    """Native control configuration."""
 
     screenshot_delay: float = 0.5
     typing_interval: float = 0.05
     click_pause: float = 0.1
-
-
-class DeploymentConfig(BaseModel):
-    """Deployment mode configuration."""
-
-    mode: Literal["vm", "native"] = "vm"
 
 
 class ModelConfig(BaseModel):
@@ -56,9 +36,10 @@ class AgentConfig(BaseModel):
 class OpenClawConfig(BaseModel):
     """OpenClaw integration configuration."""
 
-    enabled: bool = False
+    enabled: bool = True
     skill_path: str = "~/.openclaw/skills/computer-use"
     daemon_url: str = "http://localhost:3000"
+    auto_start_tui: bool = True
 
 
 class LoggingConfig(BaseModel):
@@ -78,12 +59,10 @@ class DeskPilotConfig(BaseSettings):
         extra="ignore",
     )
 
-    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
-    vm: VMConfig = Field(default_factory=VMConfig)
-    native: NativeConfig = Field(default_factory=NativeConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)
     openclaw: OpenClawConfig = Field(default_factory=OpenClawConfig)
+    native: NativeConfig = Field(default_factory=NativeConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
@@ -133,10 +112,7 @@ def load_config(config_path: Path | str | None = None) -> DeskPilotConfig:
     config_data = {}
 
     # Find config file
-    if config_path:
-        path = Path(config_path)
-    else:
-        path = find_config_file()
+    path = Path(config_path) if config_path else find_config_file()
 
     # Load YAML if found
     if path and path.exists():

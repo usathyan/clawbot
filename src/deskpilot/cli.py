@@ -1,8 +1,10 @@
-"""DeskPilot CLI - AI-powered Windows automation."""
+"""DeskPilot CLI - AI-powered desktop automation."""
 
 from __future__ import annotations
 
 import asyncio
+import shutil
+import subprocess
 from pathlib import Path
 
 import click
@@ -31,9 +33,9 @@ def async_command(f):
 @click.option("--config", "-c", type=click.Path(exists=True), help="Path to config file")
 @click.pass_context
 def cli(ctx: click.Context, config: str | None) -> None:
-    """DeskPilot - AI-powered Windows automation with OpenClaw + Cua.
+    """DeskPilot - AI-powered desktop automation.
 
-    Control Windows applications through natural language using local AI models.
+    Control desktop applications through natural language using local AI models.
     """
     ctx.ensure_object(dict)
     if config:
@@ -43,16 +45,60 @@ def cli(ctx: click.Context, config: str | None) -> None:
 
 
 @cli.command()
+@click.option("--skip-ollama", is_flag=True, help="Skip Ollama installation")
+@click.option("--skip-openclaw", is_flag=True, help="Skip OpenClaw installation")
+@click.option("--model", default="qwen2.5:3b", help="Ollama model to install")
 @click.pass_context
-@async_command
-async def setup(ctx: click.Context) -> None:
-    """Run the interactive setup wizard.
+def install(ctx: click.Context, skip_ollama: bool, skip_openclaw: bool, model: str) -> None:
+    """Install DeskPilot and all dependencies.
 
-    Guides you through configuring DeskPilot for your environment.
+    This command will:
+    - Check system requirements
+    - Install Ollama (if not present)
+    - Pull the AI model
+    - Install OpenClaw (if Node.js available)
+    - Install the computer-use skill
     """
-    from deskpilot.wizard.setup import run_setup_wizard
+    from deskpilot.installer import NativeInstaller
 
-    await run_setup_wizard()
+    installer = NativeInstaller(
+        skip_ollama=skip_ollama,
+        skip_openclaw=skip_openclaw,
+        model=model,
+    )
+    installer.run()
+
+
+@cli.command()
+@click.pass_context
+def uninstall(ctx: click.Context) -> None:
+    """Uninstall DeskPilot components.
+
+    This removes:
+    - The computer-use skill from OpenClaw
+    - DeskPilot configuration files
+
+    Note: Ollama and OpenClaw are NOT uninstalled as they may be used by other tools.
+    """
+    console.print("[blue]Uninstalling DeskPilot components...[/blue]")
+
+    # Remove skill
+    skill_path = Path.home() / ".openclaw" / "skills" / "computer-use"
+    if skill_path.exists():
+        import shutil
+
+        shutil.rmtree(skill_path)
+        console.print(f"  [green]Removed:[/green] {skill_path}")
+
+    # Remove config
+    config_path = Path("config/local.yaml")
+    if config_path.exists():
+        config_path.unlink()
+        console.print(f"  [green]Removed:[/green] {config_path}")
+
+    console.print()
+    console.print("[green]DeskPilot uninstalled.[/green]")
+    console.print("[dim]Note: Ollama and OpenClaw were not removed.[/dim]")
 
 
 @cli.command()
@@ -60,9 +106,9 @@ async def setup(ctx: click.Context) -> None:
 @click.pass_context
 @async_command
 async def demo(ctx: click.Context, mock: bool) -> None:
-    """Run the Calculator demo.
+    """Run the interactive Calculator demo.
 
-    Demonstrates AI-controlled automation with the Windows Calculator.
+    This launches the OpenClaw TUI with a demo prompt to control Calculator.
     """
     from deskpilot.wizard.demo import run_calculator_demo
 
@@ -79,7 +125,7 @@ async def demo(ctx: click.Context, mock: bool) -> None:
 async def screenshot(
     ctx: click.Context, save: bool, describe: bool, output: str | None, mock: bool
 ) -> None:
-    """Capture a screenshot of the controlled computer.
+    """Capture a screenshot of the desktop.
 
     Examples:
         deskpilot screenshot --save
@@ -200,7 +246,7 @@ async def type_cmd(ctx: click.Context, text: str, mock: bool) -> None:
 async def launch(ctx: click.Context, app: str, mock: bool) -> None:
     """Launch an application by name.
 
-    Uses the Start menu search on Windows.
+    Uses the Start menu search on Windows, Spotlight on macOS.
 
     Examples:
         deskpilot launch Calculator
@@ -333,20 +379,13 @@ def config(ctx: click.Context) -> None:
     table.add_column("Value", style="green")
 
     table.add_row("Config File", str(config_file) if config_file else "None (using defaults)")
-    table.add_row("Deployment Mode", cfg.deployment.mode)
     table.add_row("Model Provider", cfg.model.provider)
     table.add_row("Model Name", cfg.model.name)
     table.add_row("Model Base URL", cfg.model.base_url)
     table.add_row("Agent Max Steps", str(cfg.agent.max_steps))
     table.add_row("OpenClaw Enabled", str(cfg.openclaw.enabled))
+    table.add_row("OpenClaw TUI Auto-Start", str(cfg.openclaw.auto_start_tui))
     table.add_row("Log Level", cfg.logging.level)
-
-    if cfg.deployment.mode == "vm":
-        table.add_row("VM OS Type", cfg.vm.os_type)
-        table.add_row("VM Provider", cfg.vm.provider_type)
-        table.add_row("VM Display", cfg.vm.display)
-        table.add_row("VM RAM", cfg.vm.ram_size)
-        table.add_row("VM CPUs", str(cfg.vm.cpu_cores))
 
     console.print(table)
 
@@ -358,6 +397,23 @@ def status(ctx: click.Context) -> None:
     from deskpilot.wizard.setup import check_dependencies
 
     asyncio.run(check_dependencies())
+
+
+@cli.command()
+@click.pass_context
+def tui(ctx: click.Context) -> None:
+    """Launch the OpenClaw TUI (interactive mode).
+
+    This opens the OpenClaw dashboard where you can interact with DeskPilot
+    using natural language.
+    """
+    if not shutil.which("openclaw"):
+        console.print("[red]Error:[/red] OpenClaw not installed")
+        console.print("Install with: npm install -g openclaw@latest")
+        return
+
+    console.print("[blue]Launching OpenClaw TUI...[/blue]")
+    subprocess.run(["openclaw", "dashboard"])
 
 
 if __name__ == "__main__":

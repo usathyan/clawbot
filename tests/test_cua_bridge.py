@@ -6,6 +6,7 @@ from deskpilot.cua_bridge.actions import ActionResult, Actions, ScreenshotResult
 from deskpilot.cua_bridge.agent import AgentResult, AgentStep, MockAgent
 from deskpilot.cua_bridge.computer import (
     MockComputer,
+    NativeComputer,
     ScreenInfo,
     get_computer,
 )
@@ -108,24 +109,12 @@ class TestGetComputer:
 
         assert isinstance(computer, MockComputer)
 
-    def test_get_vm_computer_type(self):
-        """Test that VM mode returns VMComputer type."""
-        config = DeskPilotConfig()
-        config.deployment.mode = "vm"
-
-        computer = get_computer(config, mock=False)
-
-        from deskpilot.cua_bridge.computer import VMComputer
-        assert isinstance(computer, VMComputer)
-
     def test_get_native_computer_type(self):
-        """Test that native mode returns NativeComputer type."""
+        """Test that default mode returns NativeComputer type."""
         config = DeskPilotConfig()
-        config.deployment.mode = "native"
 
         computer = get_computer(config, mock=False)
 
-        from deskpilot.cua_bridge.computer import NativeComputer
         assert isinstance(computer, NativeComputer)
 
 
@@ -293,9 +282,9 @@ class TestAgentResult:
         result = AgentResult(
             success=False,
             task="Failed task",
-            error="Could not connect to VM",
+            error="Could not connect",
         )
 
         assert not result.success
-        assert result.error == "Could not connect to VM"
+        assert result.error == "Could not connect"
         assert result.total_steps == 0

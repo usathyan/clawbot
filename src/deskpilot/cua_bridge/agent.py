@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -133,10 +134,8 @@ class DeskPilotAgent:
 
                 # Capture screenshot after action if configured
                 if self.config.agent.screenshot_on_step:
-                    try:
+                    with contextlib.suppress(Exception):
                         step.screenshot = await self.computer.screenshot()
-                    except Exception:
-                        pass  # Don't fail on screenshot errors
 
                 if verbose:
                     self._print_step(step)

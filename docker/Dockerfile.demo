@@ -1,0 +1,37 @@
+# DeskPilot Demo Image
+# Self-contained Windows 11 environment with DeskPilot, Ollama, and OpenClaw pre-installed
+#
+# Build: docker build -f docker/Dockerfile.demo -t deskpilot/demo:latest .
+# Run:   docker run -d -p 8006:8006 --name deskpilot-demo deskpilot/demo:latest
+#
+# Access via browser: http://localhost:8006 (noVNC web interface)
+
+# Base image with Windows 11 and QEMU virtualization
+FROM trycua/cua-qemu-windows:latest
+
+# Environment variables
+ENV RAM_SIZE="8G" \
+    CPU_CORES="4" \
+    DISK_SIZE="64G" \
+    OLLAMA_MODEL="qwen2.5:3b"
+
+# Copy setup scripts
+COPY docker/setup-demo.ps1 /setup/setup-demo.ps1
+COPY docker/autostart-tui.ps1 /setup/autostart-tui.ps1
+
+# Copy DeskPilot source for installation
+COPY . /setup/deskpilot/
+
+# The base image handles Windows installation and boot
+# Our setup script will be executed on first login via Task Scheduler or startup folder
+
+# Expose noVNC web interface
+EXPOSE 8006
+
+# The entrypoint is handled by the base image
+# It starts QEMU and the noVNC server automatically
+
+LABEL org.opencontainers.image.title="DeskPilot Demo" \
+      org.opencontainers.image.description="AI-Powered Desktop Automation Demo Environment" \
+      org.opencontainers.image.version="0.1.0" \
+      org.opencontainers.image.vendor="DeskPilot"

@@ -7,9 +7,9 @@ import yaml
 
 from deskpilot.wizard.config import (
     DeskPilotConfig,
-    DeploymentConfig,
     ModelConfig,
-    VMConfig,
+    NativeConfig,
+    OpenClawConfig,
     load_config,
     save_config,
 )
@@ -22,30 +22,37 @@ class TestDeskPilotConfig:
         """Test default configuration values."""
         config = DeskPilotConfig()
 
-        assert config.deployment.mode == "vm"
         assert config.model.provider == "ollama"
         assert config.model.name == "qwen2.5:3b"
         assert config.agent.max_steps == 50
         assert config.logging.level == "INFO"
+        assert config.openclaw.enabled is True
 
     def test_nested_config_override(self):
         """Test overriding nested config values."""
         config = DeskPilotConfig(
-            deployment=DeploymentConfig(mode="native"),
             model=ModelConfig(name="llama3.2-vision:11b"),
+            openclaw=OpenClawConfig(enabled=False),
         )
 
-        assert config.deployment.mode == "native"
         assert config.model.name == "llama3.2-vision:11b"
+        assert config.openclaw.enabled is False
 
-    def test_vm_config_defaults(self):
-        """Test VM configuration defaults."""
+    def test_native_config_defaults(self):
+        """Test native configuration defaults."""
         config = DeskPilotConfig()
 
-        assert config.vm.ram_size == "8G"
-        assert config.vm.cpu_cores == 4
-        assert config.vm.vnc_port == 8006
-        assert config.vm.api_port == 5000
+        assert config.native.screenshot_delay == 0.5
+        assert config.native.typing_interval == 0.05
+        assert config.native.click_pause == 0.1
+
+    def test_openclaw_config_defaults(self):
+        """Test OpenClaw configuration defaults."""
+        config = DeskPilotConfig()
+
+        assert config.openclaw.enabled is True
+        assert config.openclaw.auto_start_tui is True
+        assert "~/.openclaw/skills/computer-use" in config.openclaw.skill_path
 
 
 class TestConfigLoadSave:
@@ -54,8 +61,8 @@ class TestConfigLoadSave:
     def test_save_and_load_config(self):
         """Test saving and loading configuration."""
         config = DeskPilotConfig(
-            deployment=DeploymentConfig(mode="native"),
             model=ModelConfig(name="test-model"),
+            native=NativeConfig(typing_interval=0.1),
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -67,13 +74,13 @@ class TestConfigLoadSave:
 
             # Load and verify
             loaded = load_config(config_path)
-            assert loaded.deployment.mode == "native"
             assert loaded.model.name == "test-model"
+            assert loaded.native.typing_interval == 0.1
 
     def test_load_partial_config(self):
         """Test loading config with only some values specified."""
         partial_config = {
-            "deployment": {"mode": "native"},
+            "model": {"name": "custom-model"},
             # Other values should use defaults
         }
 
@@ -83,7 +90,7 @@ class TestConfigLoadSave:
                 yaml.dump(partial_config, f)
 
             loaded = load_config(config_path)
-            assert loaded.deployment.mode == "native"
+            assert loaded.model.name == "custom-model"
             assert loaded.model.provider == "ollama"  # Default
             assert loaded.agent.max_steps == 50  # Default
 
@@ -92,27 +99,12 @@ class TestConfigLoadSave:
         config = load_config("/nonexistent/path/config.yaml")
 
         # Should return defaults
-        assert config.deployment.mode == "vm"
         assert config.model.provider == "ollama"
-
-    def test_env_var_override(self, monkeypatch):
-        """Test environment variable overrides."""
-        # Set env vars with the CLAWBOT_ prefix
-        monkeypatch.setenv("CLAWBOT_DEPLOYMENT__MODE", "native")
-
-        config = DeskPilotConfig()
-        # Note: env vars are processed by pydantic-settings
-        # This test verifies the config accepts the structure
+        assert config.model.name == "qwen2.5:3b"
 
 
 class TestConfigValidation:
     """Tests for config validation."""
-
-    def test_valid_deployment_modes(self):
-        """Test valid deployment mode values."""
-        for mode in ["vm", "native"]:
-            config = DeskPilotConfig(deployment=DeploymentConfig(mode=mode))
-            assert config.deployment.mode == mode
 
     def test_valid_log_levels(self):
         """Test valid log level values."""
@@ -122,14 +114,14 @@ class TestConfigValidation:
             logging_config = LoggingConfig(level=level)
             assert logging_config.level == level
 
-    def test_vm_config_values(self):
-        """Test VM configuration value handling."""
-        vm_config = VMConfig(
-            ram_size="16G",
-            cpu_cores=8,
-            disk_size="128G",
+    def test_native_config_values(self):
+        """Test native configuration value handling."""
+        native_config = NativeConfig(
+            screenshot_delay=1.0,
+            typing_interval=0.1,
+            click_pause=0.2,
         )
 
-        assert vm_config.ram_size == "16G"
-        assert vm_config.cpu_cores == 8
-        assert vm_config.disk_size == "128G"
+        assert native_config.screenshot_delay == 1.0
+        assert native_config.typing_interval == 0.1
+        assert native_config.click_pause == 0.2

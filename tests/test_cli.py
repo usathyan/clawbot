@@ -21,9 +21,10 @@ class TestCLI:
 
         assert result.exit_code == 0
         assert "DeskPilot" in result.output
-        assert "setup" in result.output
+        assert "install" in result.output
         assert "demo" in result.output
         assert "screenshot" in result.output
+        assert "status" in result.output
 
     def test_cli_version(self, runner):
         """Test CLI version output."""
@@ -37,8 +38,8 @@ class TestCLI:
         result = runner.invoke(cli, ["config"])
 
         assert result.exit_code == 0
-        assert "Deployment Mode" in result.output
         assert "Model" in result.output
+        assert "OpenClaw" in result.output
 
     def test_screenshot_help(self, runner):
         """Test screenshot command help."""
@@ -85,6 +86,28 @@ class TestCLI:
 
         assert result.exit_code == 0
         assert "KEYS" in result.output
+
+    def test_install_help(self, runner):
+        """Test install command help."""
+        result = runner.invoke(cli, ["install", "--help"])
+
+        assert result.exit_code == 0
+        assert "--skip-ollama" in result.output
+        assert "--skip-openclaw" in result.output
+        assert "--model" in result.output
+
+    def test_uninstall_help(self, runner):
+        """Test uninstall command help."""
+        result = runner.invoke(cli, ["uninstall", "--help"])
+
+        assert result.exit_code == 0
+
+    def test_tui_help(self, runner):
+        """Test tui command help."""
+        result = runner.invoke(cli, ["tui", "--help"])
+
+        assert result.exit_code == 0
+        assert "OpenClaw" in result.output or "TUI" in result.output
 
 
 class TestCLIWithMock:
@@ -174,7 +197,7 @@ class TestCLIConfigOption:
         import yaml
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            yaml.dump({"deployment": {"mode": "native"}}, f)
+            yaml.dump({"model": {"name": "custom-model"}}, f)
             config_path = f.name
 
         try:
@@ -182,7 +205,7 @@ class TestCLIConfigOption:
 
             assert result.exit_code == 0
             # Should show the loaded config
-            assert "native" in result.output
+            assert "custom-model" in result.output
         finally:
             import os
 

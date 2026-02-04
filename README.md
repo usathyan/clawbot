@@ -12,429 +12,405 @@
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0066CC" alt="Platform">
   <img src="https://img.shields.io/badge/AI-100%25%20Local-00AA55" alt="AI">
   <img src="https://img.shields.io/badge/GPU-Not%20Required-FF6600" alt="GPU">
+  <img src="https://img.shields.io/badge/Status-Proof%20of%20Concept-yellow" alt="Status">
   <img src="https://img.shields.io/badge/License-MIT-AAAAAA" alt="License">
 </p>
 
+> **Note:** This project is a **proof of concept** and is not production-ready. It demonstrates the capabilities of AI-powered desktop automation but may have limitations, bugs, or incomplete features. Use at your own risk.
+
 ---
 
-## Executive Summary
+## What is DeskPilot?
 
-**DeskPilot transforms any computer into an AI-powered automation platform.**
+DeskPilot transforms any computer into an AI-powered automation platform. It uses local AI models (via Ollama) to understand natural language commands and control desktop applications through screen capture and input simulation.
 
-That Windows XP machine running your critical manufacturing software? The Mac mini controlling your digital signage? The lab computer running decade-old instrument software? DeskPilot gives them all an AI brain that can see, understand, and operate any application—just like a human would.
-
-### 100% Self-Contained. Air-Gapped Capable. No Cloud Required.
-
-DeskPilot runs **entirely on local hardware**—including the AI models. Using CPU-optimized models (Qwen 2.5, 3B parameters), DeskPilot operates on standard hardware without expensive GPUs or cloud connectivity.
-
-| Deployment Scenario | DeskPilot Capability |
-|---------------------|---------------------|
-| **Air-gapped networks** | Zero internet required after setup |
-| **Healthcare (HIPAA)** | PHI never leaves premises |
-| **Defense systems** | Classified environment compatible |
-| **Remote facilities** | Works offline indefinitely |
-
-### The Problem
-
-Organizations have billions invested in software that:
-- Has no API or integration capabilities
-- Runs only on specific hardware or legacy OS
-- Requires manual, repetitive human interaction
-- Cannot be modernized without significant cost
-
-### The Solution
-
-DeskPilot provides a universal integration layer for **any application with a screen**:
-
-```
-"Open the inventory system, find items below threshold,
- and export them to a spreadsheet"
-```
-
-DeskPilot executes this across applications that were never designed to work together.
+**Key Features:**
+- **100% Local** - All AI processing happens on your machine, no cloud required
+- **Natural Language** - Control apps with commands like "Open Calculator and compute 15 * 8"
+- **Universal** - Works with any application that has a GUI
+- **Air-Gapped Ready** - Fully offline capable after initial setup
 
 ---
 
 ## Architecture
 
+DeskPilot runs **directly on your machine** and controls applications natively:
+
 ```mermaid
-block-beta
-    columns 5
+%%{init: {'theme': 'neutral', 'themeVariables': { 'primaryColor': '#4a86e8', 'primaryTextColor': '#fff', 'primaryBorderColor': '#2d5aa3', 'lineColor': '#6c757d', 'secondaryColor': '#f8f9fa', 'tertiaryColor': '#e9ecef'}}}%%
+flowchart TB
+    subgraph computer["Your Computer"]
+        subgraph ui["User Interface"]
+            tui["OpenClaw TUI / DeskPilot CLI<br/>> Open Calculator and compute 15 * 8"]
+        end
 
-    block:USER:5
-        columns 5
-        CLI["Command Line"] CHAT["Slack/Teams"] SOCIAL["Telegram"] API["REST API"] WEB["Web UI"]
+        subgraph core["Core Components"]
+            agent["DeskPilot<br/>Agent"]
+            ollama["Ollama AI<br/>(qwen2.5)"]
+            native["pyautogui<br/>+ mss"]
+        end
+
+        subgraph apps["Desktop Applications"]
+            calc["Calculator, Notepad, Browser...<br/>(any GUI application)"]
+        end
+
+        tui --> agent
+        agent <--> ollama
+        agent --> native
+        native --> calc
     end
 
-    space:5
-
-    block:ORCHESTRATION:5
-        columns 3
-        GATEWAY["OpenClaw Gateway"]
-        SKILLS["Skills Library"]
-        AI["Local AI (Ollama)"]
-    end
-
-    space:5
-
-    block:CONTROL:5
-        columns 3
-        CUA["Cua SDK"]
-        VISION["Screen Capture"]
-        INPUT["Mouse & Keyboard"]
-    end
-
-    space:5
-
-    block:TARGETS:5
-        columns 3
-        WIN["Windows"]
-        MAC["macOS"]
-        LINUX["Linux"]
-    end
-
-    space:5
-
-    block:APPS:5
-        columns 4
-        LAB["Lab Equipment"]
-        LEGACY["Legacy Apps"]
-        DESKTOP["Desktop Software"]
-        CUSTOM["Custom Tools"]
-    end
-
-    USER --> ORCHESTRATION
-    ORCHESTRATION --> CONTROL
-    CONTROL --> TARGETS
-    TARGETS --> APPS
+    style computer fill:#1a1a2e,stroke:#4a86e8,stroke-width:2px
+    style ui fill:#16213e,stroke:#4a86e8
+    style core fill:#0f3460,stroke:#4a86e8
+    style apps fill:#1a1a2e,stroke:#4a86e8
+    style tui fill:#4a86e8,stroke:#2d5aa3,color:#fff
+    style agent fill:#4a86e8,stroke:#2d5aa3,color:#fff
+    style ollama fill:#00aa55,stroke:#007a3d,color:#fff
+    style native fill:#ff6600,stroke:#cc5200,color:#fff
+    style calc fill:#6c757d,stroke:#495057,color:#fff
 ```
 
-### Technology Stack
-
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Interface** | OpenClaw Gateway | Multi-channel routing (CLI, chat, API) |
-| **AI Engine** | Ollama + Qwen 2.5 | **CPU-only** local inference |
-| **Skills** | Markdown + YAML | Shareable automation recipes |
-| **Control** | Cua SDK | Cross-platform screen/input automation |
-| **Sandbox** | Lume / Docker / QEMU | Isolated VM environments |
-
-### Hardware Requirements
-
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| **CPU** | 4 cores @ 2.5 GHz | 8+ cores @ 3.0 GHz |
-| **RAM** | 8 GB | 16 GB |
-| **Storage** | 10 GB | 50 GB SSD |
-| **GPU** | **Not required** | Optional (faster) |
-| **Network** | **Not required** | Optional |
-
-**Runs on:** Intel i5+, AMD Ryzen 5+, Apple M1+, ARM64
-
----
-
-## Real-World Applications
-
-### Laboratory & Scientific Equipment
-
-| System | Challenge | DeskPilot Solution |
-|--------|-----------|-------------------|
-| **Mass Spectrometers** | 2005 vendor software, no API | Natural language data extraction |
-| **DNA Sequencers** | Windows XP only | Automated run scheduling |
-| **Oscilloscopes** | Manual screenshot capture | Continuous monitoring |
-| **Chromatography** | Proprietary formats | AI-powered reporting |
-
-### Air-Gapped & Secure Environments
-
-| Environment | Requirement | Capability |
-|-------------|-------------|-----------|
-| **Defense** | Zero connectivity | 100% offline operation |
-| **Healthcare** | HIPAA compliance | Local AI, no cloud |
-| **Finance** | Regulatory audit | Full action logging |
-| **Critical Infrastructure** | OT/IT separation | VM isolation |
-
-### Legacy Business Systems
-
-| Category | Examples | Potential |
-|----------|----------|-----------|
-| **Industrial** | SCADA, HMI panels | ChatOps monitoring |
-| **Finance** | Trading terminals | Automated reporting |
-| **Retail** | DOS-based POS | Modern integration |
-| **Manufacturing** | CNC controls | Remote operation |
-| **Media** | Winamp, VLC | Voice control |
-
----
-
-## The Calculator Demo
-
-DeskPilot uses **Skills**—modular recipes that teach the AI to operate applications.
-
-```bash
-# Install
-git clone https://github.com/usathyan/deskpilot && cd deskpilot
-make install
-
-# Run the demo
-deskpilot demo
-```
-
-### What Happens
-
-1. DeskPilot **launches Calculator** via Start menu
-2. You type: `"Calculate 15 times 8"`
-3. AI **analyzes the screen**, identifies buttons
-4. DeskPilot **clicks**: 1 → 5 → × → 8 → =
-5. **Returns**: `120`
-
-```
-┌─────────────────────────────────────┐
-│  DeskPilot Calculator Demo          │
-└─────────────────────────────────────┘
-
-> Calculate 15 * 8
-
-  Step 1: Launching Calculator...
-  Step 2: Clicking [1]
-  Step 3: Clicking [5]
-  Step 4: Clicking [×]
-  Step 5: Clicking [8]
-  Step 6: Clicking [=]
-
-┌──────────────┐
-│  Result: 120 │
-└──────────────┘
-```
-
----
-
-## Build & Share Skills
-
-Every application you automate becomes a reusable skill.
-
-### Example: Winamp Skill
-
-```yaml
-# skills/winamp/SKILL.md
-name: winamp
-description: Control Winamp media player
-
-capabilities:
-  - Play/pause/stop
-  - Navigate playlists
-  - Adjust volume
-  - Search songs
-
-examples:
-  - "Play my 90s playlist at 70% volume"
-  - "Skip to the next song"
-  - "What's currently playing?"
-```
-
-### Share With the Community
-
-```bash
-deskpilot skill package ./my-skill
-deskpilot skill publish my-skill
-```
-
-**Every skill you create helps someone else automate their legacy systems.**
-
----
-
-## Deployment Options
-
-> **Important:** DeskPilot runs on your **HOST machine** and controls the **TARGET** (VM or native desktop) remotely via screen capture and input injection. You do NOT install DeskPilot inside the VM.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  HOST MACHINE (where you install DeskPilot)                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ DeskPilot    │  │ Ollama AI    │  │ Cua SDK      │          │
-│  │ CLI          │  │ (qwen2.5)    │  │              │          │
-│  └──────┬───────┘  └──────────────┘  └──────┬───────┘          │
-│         │                                    │                  │
-│         └────────────────┬───────────────────┘                  │
-│                          │ Controls                             │
-│                          ▼                                      │
-│         ┌────────────────────────────────────┐                  │
-│         │  TARGET: VM or Native Desktop      │                  │
-│         │  (Calculator, apps, legacy software)│                  │
-│         └────────────────────────────────────┘                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### Step 1: Install DeskPilot on Your HOST Machine
-
-```bash
-# Clone the repository
-git clone https://github.com/usathyan/deskpilot
-cd deskpilot
-
-# Create virtual environment and install
-make venv
-source .venv/bin/activate
-make install
-
-# Install Ollama and download AI model (~2GB)
-brew install ollama   # or: curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull qwen2.5:3b
-```
-
----
-
-### Step 2: Set Up Your TARGET (Choose One)
-
-#### Option A: macOS VM via Lume (Apple Silicon & Intel)
-
-```bash
-# Install Lume
-brew install lume
-
-# Create and run a macOS VM
-lume create --os macOS --ipsw latest deskpilot-vm
-lume run deskpilot-vm
-
-# Configure DeskPilot to use the VM
-cat > config/local.yaml << 'EOF'
-deployment:
-  mode: vm
-vm:
-  os_type: macos
-  provider_type: lume
-EOF
-```
-
-#### Option B: Windows VM via Docker (Linux Host)
-
-```bash
-# Start Windows 11 VM
-docker-compose up -d
-
-# Access via web browser
-open http://localhost:8006
-
-# Configure DeskPilot
-cat > config/local.yaml << 'EOF'
-deployment:
-  mode: vm
-vm:
-  os_type: windows
-  provider_type: docker
-EOF
-```
-
-#### Option C: Native Mode (Control Your Own Desktop)
-
-```bash
-# No VM needed - DeskPilot controls your current machine
-cat > config/local.yaml << 'EOF'
-deployment:
-  mode: native
-EOF
-```
-
----
-
-### Step 3: Run DeskPilot
-
-```bash
-# Make sure your VM is running (if using VM mode)
-# Then run the demo from your HOST machine:
-deskpilot demo
-```
-
----
-
-### Remote Machine
-
-Connect to a VM running on another host:
-
-```yaml
-# config/local.yaml
-vm:
-  provider_type: cloud
-  host: 192.168.1.100
-```
-
----
-
-## ROI Impact
-
-| Task | Manual | With DeskPilot |
-|------|--------|----------------|
-| Data entry (1000 records) | 8 hours | 15 minutes |
-| Daily report generation | 2 hours | 2 minutes |
-| System monitoring | 4 hrs/day | Continuous |
-| Operator training | 2 weeks | 1 day |
-
-**Typical savings: 70-90% on repetitive GUI tasks.**
+For demos, we also provide a Docker image with a self-contained Windows VM.
 
 ---
 
 ## Quick Start
 
+### Option 1: Try the Demo (Docker)
+
+The fastest way to see DeskPilot in action:
+
+```bash
+# Clone the repo
+git clone https://github.com/usathyan/deskpilot && cd deskpilot
+
+# Start the demo container (Windows VM with everything pre-installed)
+docker-compose up -d
+
+# Open your browser to see the Windows desktop
+open http://localhost:8006
+```
+
+The OpenClaw TUI will be running. Try typing:
+- `Open Calculator and compute 15 * 8`
+- `Take a screenshot`
+
+### Option 2: Native Installation
+
+Install DeskPilot on your own machine:
+
 ```bash
 # Clone and install
-git clone https://github.com/usathyan/deskpilot
-cd deskpilot
+git clone https://github.com/usathyan/deskpilot && cd deskpilot
 make venv && source .venv/bin/activate
 make install
 
-# Setup AI model (one-time, ~2GB download)
-ollama pull qwen2.5:3b
+# Run the installer (sets up Ollama, OpenClaw, etc.)
+deskpilot install
 
-# Configure
-deskpilot setup
+# Check everything is ready
+deskpilot status
 
-# Run demo
+# Run the demo
 deskpilot demo
 ```
 
-### Chat Platform Integration
+Or use the one-liner:
 
 ```bash
-# Install OpenClaw
-npm install -g openclaw@latest
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/usathyan/deskpilot/main/scripts/install.sh | bash
 
-# Connect Slack
-openclaw channel add slack --token xoxb-your-token
-
-# Control from Slack
-# @deskpilot screenshot the dashboard
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/usathyan/deskpilot/main/scripts/install.ps1 | iex
 ```
 
 ---
 
-## Security
+## Usage
 
-| Concern | DeskPilot Approach |
-|---------|-------------------|
-| **Data Privacy** | 100% local AI |
-| **Air-Gapped** | Fully offline capable |
-| **Audit Trail** | Complete action logging |
-| **Isolation** | VM sandboxing |
-| **Access Control** | OpenClaw IAM integration |
+### Interactive TUI
+
+Launch the OpenClaw TUI for interactive control:
+
+```bash
+deskpilot tui
+# or
+openclaw dashboard
+```
+
+Then type natural language commands:
+```
+> Open Calculator
+> Click the 7 button, then multiply, then 8, then equals
+> What is on screen?
+```
+
+### CLI Commands
+
+```bash
+# Take a screenshot
+deskpilot screenshot --save
+
+# Click at coordinates
+deskpilot click 500 300
+
+# Type text
+deskpilot type "Hello, World!"
+
+# Launch an app
+deskpilot launch Calculator
+
+# Press keys
+deskpilot press enter
+deskpilot hotkey ctrl c
+
+# Run an AI task
+deskpilot run "Open Calculator and compute 15 * 8"
+```
+
+### Configuration
+
+View current settings:
+```bash
+deskpilot config
+```
+
+Override settings in `config/local.yaml`:
+```yaml
+model:
+  provider: ollama
+  name: qwen2.5:3b
+
+agent:
+  max_steps: 50
+  verbose: true
+```
+
+---
+
+## Agent Personalization
+
+DeskPilot uses a multi-file configuration pattern for personalized automation:
+
+```mermaid
+%%{init: {'theme': 'dark'}}%%
+flowchart LR
+    subgraph config["~/.openclaw/skills/computer-use/"]
+        soul["SOUL.md<br/>Agent Personality"]
+        user["USER.md<br/>Your Context"]
+        memory["MEMORY.md<br/>Persistent Knowledge"]
+        heartbeat["HEARTBEAT.md<br/>Proactive Monitoring"]
+        cron["CRON.md<br/>Scheduled Tasks"]
+    end
+
+    soul --> |"how to communicate"| agent["DeskPilot Agent"]
+    user --> |"who am I helping"| agent
+    memory --> |"what I remember"| agent
+    heartbeat --> |"what to monitor"| agent
+    cron --> |"when to act"| agent
+
+    style soul fill:#4a86e8,stroke:#2d5aa3,color:#fff
+    style user fill:#ff6600,stroke:#cc5200,color:#fff
+    style memory fill:#00aa55,stroke:#007a3d,color:#fff
+    style heartbeat fill:#9c27b0,stroke:#7b1fa2,color:#fff
+    style cron fill:#795548,stroke:#5d4037,color:#fff
+    style agent fill:#1a1a2e,stroke:#4a86e8,color:#fff
+    style config fill:#0f3460,stroke:#4a86e8
+```
+
+### Essential: Configure USER.md
+
+The most important step after installation is filling in `USER.md`. The more context you provide, the more relevant and efficient the automation becomes.
+
+```bash
+# Open USER.md for editing
+# macOS/Linux
+nano ~/.openclaw/skills/computer-use/USER.md
+
+# Windows
+notepad %USERPROFILE%\.openclaw\skills\computer-use\USER.md
+```
+
+**Include:**
+- Your role and responsibilities
+- Current projects and priorities
+- Primary applications you use daily
+- Common workflows that could be automated
+- Communication preferences (technical vs. conversational)
+- Boundaries (sensitive apps, off-limits areas)
+
+> **Tip:** Use voice transcription to quickly describe your workflows. Talk for 10-15 minutes about how you work, then paste the transcript into USER.md.
+
+### File Purposes
+
+| File | Purpose | Update Frequency |
+|------|---------|------------------|
+| **USER.md** | Your context, projects, preferences | Weekly (as priorities shift) |
+| **SOUL.md** | Agent communication style, boundaries | Rarely (only if tone is wrong) |
+| **MEMORY.md** | Persistent corrections and learnings | Automatic + weekly cleanup |
+| **HEARTBEAT.md** | Proactive monitoring checks | As needed |
+| **CRON.md** | Scheduled automation tasks | As needed |
+
+### Example: Developer Setup
+
+**USER.md snippet:**
+```markdown
+# Basic Info
+Name: Alex
+Timezone: America/Los_Angeles
+OS: macOS Sonoma
+
+# Work Context
+Role: Backend Engineer
+Projects:
+  - [HIGH] API migration - due Feb 15
+  - [MEDIUM] Code review backlog
+
+# Primary Apps
+- VS Code (Python, Docker extensions)
+- Chrome (GitHub, Jira, Slack web)
+- Terminal (zsh, kubectl)
+
+# Preferences
+Communication: Technical, precise
+Confirmations: Only for destructive actions
+```
+
+**CRON.md snippet:**
+```yaml
+task: morning_startup
+schedule: "0 9 * * 1-5"  # 9 AM weekdays
+actions:
+  - launch: "VS Code"
+  - launch: "Chrome"
+  - execute: "open https://jira.company.com/board"
+```
+
+---
+
+## Requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| **CPU** | 4 cores @ 2.5 GHz | 8+ cores @ 3.0 GHz |
+| **RAM** | 8 GB | 16 GB |
+| **Storage** | 5 GB | 10 GB SSD |
+| **Python** | 3.11+ | 3.12+ |
+| **GPU** | **Not required** | Optional (faster) |
+
+**Runs on:** Intel i5+, AMD Ryzen 5+, Apple M1+
+
+---
+
+## How It Works
+
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'actorTextColor': '#fff', 'actorBkg': '#4a86e8', 'actorBorder': '#2d5aa3', 'signalColor': '#fff', 'signalTextColor': '#fff'}}}%%
+sequenceDiagram
+    participant User
+    participant Agent as DeskPilot Agent
+    participant AI as Ollama (qwen2.5)
+    participant Screen as mss (Screenshot)
+    participant Input as pyautogui
+
+    User->>Agent: "Open Calculator and compute 15 * 8"
+    Agent->>Screen: 1. Capture screenshot
+    Screen-->>Agent: Current screen state
+    Agent->>AI: 2. Analyze screen + task
+    AI-->>Agent: 3. Plan: Click Calculator icon at (x,y)
+    Agent->>Input: 4. Execute click
+    Input-->>Agent: Action complete
+    Agent->>Screen: 5. Capture verification screenshot
+    Screen-->>Agent: Updated screen state
+    Agent->>AI: Verify success
+    AI-->>Agent: Continue with next action...
+    Agent-->>User: Task completed: Result is 120
+```
+
+**Loop continues until task is complete or max steps reached.**
+
+---
+
+## Project Structure
+
+```
+deskpilot/
+├── src/deskpilot/
+│   ├── cli.py              # CLI commands
+│   ├── installer/          # Native installer
+│   ├── cua_bridge/         # Computer control layer
+│   │   ├── computer.py     # NativeComputer, MockComputer
+│   │   ├── actions.py      # High-level actions
+│   │   └── agent.py        # AI agent
+│   ├── wizard/
+│   │   ├── config.py       # Configuration management
+│   │   ├── setup.py        # Status checking
+│   │   └── demo.py         # Calculator demo
+│   └── openclaw_skill/     # OpenClaw integration
+├── config/
+│   └── default.yaml        # Default configuration
+├── docker/
+│   ├── Dockerfile.demo     # Demo container
+│   └── setup-demo.ps1      # Windows setup script
+├── scripts/
+│   ├── install.sh          # macOS/Linux installer
+│   └── install.ps1         # Windows installer
+└── tests/                  # Test suite
+```
+
+---
+
+## Development
+
+```bash
+# Create virtual environment
+make venv
+source .venv/bin/activate
+
+# Install dev dependencies
+make install
+
+# Run tests
+make test
+
+# Run linter
+make lint
+
+# Format code
+make format
+```
+
+---
+
+## Limitations (Proof of Concept)
+
+- **AI Accuracy**: The AI may misinterpret screens or make incorrect clicks
+- **Speed**: Local AI inference is slower than cloud APIs
+- **Reliability**: Complex multi-step tasks may fail partway through
+- **Platform Support**: Best tested on Windows; macOS/Linux may have issues
+- **Security**: Requires screen capture and input permissions
 
 ---
 
 ## Roadmap
 
 - [x] Core automation engine
-- [x] Multi-platform (Windows, macOS, Linux)
-- [x] Calculator demo skill
+- [x] Multi-platform support
+- [x] Calculator demo
+- [x] Native installer
+- [x] Docker demo environment
+- [ ] Improved AI accuracy
 - [ ] Skill marketplace
 - [ ] Visual skill builder
-- [ ] Enterprise SSO
 - [ ] Scheduled triggers
-- [ ] Multi-machine orchestration
 
 ---
 
 ## License
 
-MIT License — Free for commercial and personal use.
+MIT License - Free for commercial and personal use.
 
 ---
 
@@ -442,6 +418,6 @@ MIT License — Free for commercial and personal use.
   <b>DeskPilot: Because every desktop deserves an AI co-pilot.</b>
   <br><br>
   <a href="#quick-start">Get Started</a> ·
-  <a href="#build--share-skills">Build Skills</a> ·
+  <a href="#usage">Usage</a> ·
   <a href="https://github.com/usathyan/deskpilot/discussions">Community</a>
 </p>

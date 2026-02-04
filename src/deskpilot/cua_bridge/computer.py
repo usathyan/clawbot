@@ -1,9 +1,8 @@
-"""Computer abstraction for VM and Native modes."""
+"""Computer abstraction for native desktop control."""
 
 from __future__ import annotations
 
 import asyncio
-import platform
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -78,104 +77,6 @@ class BaseComputer(ABC):
         pass
 
 
-class VMComputer(BaseComputer):
-    """Computer control via Cua VM (Docker + QEMU)."""
-
-    def __init__(self, config: DeskPilotConfig) -> None:
-        self.config = config
-        self._computer = None
-        self._interface = None
-        self._connected = False
-
-    async def connect(self) -> None:
-        """Connect to the Cua VM."""
-        try:
-            from computer import Computer
-        except ImportError as e:
-            raise ImportError(
-                "cua-agent package not installed. Run: uv pip install cua-agent"
-            ) from e
-
-        self._computer = Computer(
-            os_type=self.config.vm.os_type,
-            provider_type=self.config.vm.provider_type,
-            display=self.config.vm.display,
-            memory=self.config.vm.ram_size,
-            cpu=str(self.config.vm.cpu_cores),
-        )
-        # Get the interface for input operations
-        self._interface = self._computer.interface
-        self._connected = True
-
-    async def disconnect(self) -> None:
-        """Disconnect from the VM."""
-        if self._computer:
-            try:
-                self._computer.stop()
-            except Exception:
-                pass  # Ignore cleanup errors
-            self._computer = None
-            self._interface = None
-        self._connected = False
-
-    async def screenshot(self) -> Image.Image:
-        """Capture screenshot from VM."""
-        if not self._interface:
-            raise RuntimeError("Not connected to VM")
-        # Cua interface methods are sync, run in thread
-        return await asyncio.to_thread(self._interface.screenshot)
-
-    async def click(self, x: int, y: int, button: str = "left") -> None:
-        """Click in VM."""
-        if not self._interface:
-            raise RuntimeError("Not connected to VM")
-        if button == "left":
-            await asyncio.to_thread(self._interface.left_click, x, y)
-        elif button == "right":
-            await asyncio.to_thread(self._interface.right_click, x, y)
-        else:
-            await asyncio.to_thread(self._interface.left_click, x, y)
-
-    async def double_click(self, x: int, y: int) -> None:
-        """Double-click in VM."""
-        if not self._interface:
-            raise RuntimeError("Not connected to VM")
-        await asyncio.to_thread(self._interface.double_click, x, y)
-
-    async def type_text(self, text: str) -> None:
-        """Type text in VM."""
-        if not self._interface:
-            raise RuntimeError("Not connected to VM")
-        await asyncio.to_thread(self._interface.type_text, text)
-
-    async def press_key(self, key: str) -> None:
-        """Press key in VM."""
-        if not self._interface:
-            raise RuntimeError("Not connected to VM")
-        await asyncio.to_thread(self._interface.press_key, key)
-
-    async def hotkey(self, *keys: str) -> None:
-        """Press hotkey in VM."""
-        if not self._interface:
-            raise RuntimeError("Not connected to VM")
-        await asyncio.to_thread(self._interface.hotkey, *keys)
-
-    def get_screen_info(self) -> ScreenInfo:
-        """Get VM screen info."""
-        if self._interface:
-            try:
-                size = self._interface.get_screen_size()
-                return ScreenInfo(width=size[0], height=size[1])
-            except Exception:
-                pass
-        # Default Windows VM resolution
-        return ScreenInfo(width=1920, height=1080)
-
-    @property
-    def is_connected(self) -> bool:
-        return self._connected
-
-
 class NativeComputer(BaseComputer):
     """Computer control via native OS APIs (pyautogui + mss)."""
 
@@ -187,15 +88,6 @@ class NativeComputer(BaseComputer):
 
     async def connect(self) -> None:
         """Initialize native control libraries."""
-        if platform.system() != "Windows":
-            # Allow connection for testing, but warn
-            import warnings
-
-            warnings.warn(
-                f"Native mode is designed for Windows, running on {platform.system()}. "
-                "Some features may not work correctly."
-            )
-
         try:
             import mss
             import pyautogui
@@ -211,7 +103,7 @@ class NativeComputer(BaseComputer):
         except ImportError as e:
             raise ImportError(
                 "Native mode requires pyautogui and mss. "
-                "Run: uv pip install -e '.[native]'"
+                "Run: pip install deskpilot[native] or pip install pyautogui mss pillow"
             ) from e
 
     async def disconnect(self) -> None:
@@ -282,7 +174,7 @@ class NativeComputer(BaseComputer):
 
 
 class MockComputer(BaseComputer):
-    """Mock computer for testing without actual VM or native control."""
+    """Mock computer for testing without actual native control."""
 
     def __init__(self, config: DeskPilotConfig) -> None:
         self.config = config
@@ -335,7 +227,7 @@ def get_computer(config: DeskPilotConfig | None = None, mock: bool = False) -> B
         mock: If True, return MockComputer for testing.
 
     Returns:
-        BaseComputer instance based on deployment mode.
+        BaseComputer instance (NativeComputer or MockComputer).
     """
     if config is None:
         config = get_config()
@@ -343,9 +235,4 @@ def get_computer(config: DeskPilotConfig | None = None, mock: bool = False) -> B
     if mock:
         return MockComputer(config)
 
-    if config.deployment.mode == "vm":
-        return VMComputer(config)
-    elif config.deployment.mode == "native":
-        return NativeComputer(config)
-    else:
-        raise ValueError(f"Unknown deployment mode: {config.deployment.mode}")
+    return NativeComputer(config)

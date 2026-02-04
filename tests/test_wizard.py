@@ -51,12 +51,12 @@ class TestCheckDependencies:
             results = await check_dependencies()
 
         assert isinstance(results, dict)
-        assert "python_3.12+" in results
-        assert "docker" in results
+        assert "python_3.11+" in results
         assert "ollama" in results
-        assert "cua-agent" in results
+        assert "ollama_running" in results
         assert "native-packages" in results
         assert "openclaw" in results
+        assert "node_18+" in results
 
     @pytest.mark.asyncio
     async def test_python_version_check(self):
@@ -64,10 +64,10 @@ class TestCheckDependencies:
         with patch("deskpilot.wizard.setup.console"):
             results = await check_dependencies()
 
-        # We're running on Python 3.12+, so this should be True
+        # We're running on Python 3.11+, so this should be True
         py_version = platform.python_version_tuple()
-        expected = int(py_version[0]) >= 3 and int(py_version[1]) >= 12
-        assert results["python_3.12+"] == expected
+        expected = int(py_version[0]) >= 3 and int(py_version[1]) >= 11
+        assert results["python_3.11+"] == expected
 
     @pytest.mark.asyncio
     async def test_os_detection_flags(self):
@@ -94,18 +94,19 @@ class TestSetupWizardFlow:
             assert key in env
 
     @pytest.mark.asyncio
-    async def test_wizard_with_mock_prompts(self):
-        """Test wizard flow with mocked user input."""
-        # This is a smoke test - full integration would require
-        # mocking Rich prompts and console
+    async def test_check_dependencies_os_flags(self):
+        """Test that check_dependencies includes OS flags."""
         with patch("deskpilot.wizard.setup.console"):
-            with patch("deskpilot.wizard.setup.Prompt") as mock_prompt:
-                with patch("deskpilot.wizard.setup.Confirm") as mock_confirm:
-                    mock_prompt.ask.return_value = "vm"
-                    mock_confirm.ask.return_value = False
+            results = await check_dependencies()
 
-                    # Verify mocks are set up correctly
-                    assert mock_prompt.ask.return_value == "vm"
+        # Should have OS detection flags
+        assert "is_windows" in results
+        assert "is_macos" in results
+        assert "is_linux" in results
+
+        # Exactly one should be True (or none on exotic OS)
+        os_flags = [results["is_windows"], results["is_macos"], results["is_linux"]]
+        assert sum(os_flags) <= 1
 
 
 class TestSkillInstallation:
@@ -115,7 +116,7 @@ class TestSkillInstallation:
         """Test that the skill source path is valid."""
         from pathlib import Path
 
-        skill_source = (
+        skill_path = (
             Path(__file__).parent.parent
             / "src"
             / "deskpilot"
@@ -123,7 +124,7 @@ class TestSkillInstallation:
             / "computer-use"
         )
         # Path should exist after project setup
-        # This validates the project structure
+        assert skill_path.exists(), f"Skill path not found: {skill_path}"
 
     def test_skill_md_content(self):
         """Test that SKILL.md has required content."""
@@ -165,7 +166,9 @@ class TestDemoModule:
         from deskpilot.wizard.demo import run_quick_demo
 
         # Suppress console output
-        with patch("deskpilot.wizard.demo.console"):
-            with patch("deskpilot.cua_bridge.agent.console"):
-                # Should complete without error in mock mode
-                await run_quick_demo(mock=True)
+        with (
+            patch("deskpilot.wizard.demo.console"),
+            patch("deskpilot.cua_bridge.agent.console"),
+        ):
+            # Should complete without error in mock mode
+            await run_quick_demo(mock=True)

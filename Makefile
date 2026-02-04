@@ -1,4 +1,4 @@
-.PHONY: help install clean test lint format run venv setup demo check build release shell status screenshot config
+.PHONY: help install clean test lint format run venv demo check build release shell status screenshot config docker-build docker-run docker-push
 
 # Default target
 help:
@@ -8,12 +8,12 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  venv           Create virtual environment with uv"
-	@echo "  install        Install dependencies"
-	@echo "  install-native Install with native Windows support"
+	@echo "  install        Install dependencies (includes native packages)"
 	@echo "  clean          Remove build artifacts and cache"
 	@echo ""
 	@echo "Quality:"
 	@echo "  test           Run tests with pytest"
+	@echo "  test-e2e       Run e2e tests (requires Docker demo running)"
 	@echo "  lint           Run linter (ruff)"
 	@echo "  format         Format code (ruff format)"
 	@echo "  typecheck      Run type checking (mypy)"
@@ -21,18 +21,17 @@ help:
 	@echo ""
 	@echo "Running:"
 	@echo "  run            Show help"
-	@echo "  setup          Run interactive setup wizard"
 	@echo "  demo           Run the Calculator demo"
 	@echo "  status         Check system status"
 	@echo "  config         Show current configuration"
 	@echo "  screenshot     Take a screenshot"
 	@echo "  shell          Open Python shell with deskpilot"
 	@echo ""
-	@echo "VM Management:"
-	@echo "  vm-up          Start Windows VM (Docker)"
-	@echo "  vm-down        Stop Windows VM"
-	@echo "  vm-logs        View VM logs"
-	@echo "  pull-model     Download Ollama model"
+	@echo "Docker (Demo Environment):"
+	@echo "  docker-build   Build the demo Docker image"
+	@echo "  docker-run     Run the demo container"
+	@echo "  docker-stop    Stop the demo container"
+	@echo "  docker-push    Push demo image to registry"
 	@echo ""
 	@echo "Packaging:"
 	@echo "  build          Build package"
@@ -44,13 +43,9 @@ venv:
 	uv venv
 	@echo "Virtual environment created. Activate with: source .venv/bin/activate"
 
-# Install dependencies
+# Install dependencies (native packages included by default)
 install:
 	uv pip install -e ".[dev]"
-
-# Install with native Windows support
-install-native:
-	uv pip install -e ".[dev,native]"
 
 # Remove build artifacts
 clean:
@@ -67,45 +62,46 @@ clean:
 
 # Run tests
 test:
-	pytest tests/ -v --cov=src/deskpilot --cov-report=term-missing
+	.venv/bin/pytest tests/ -v --cov=src/deskpilot --cov-report=term-missing --ignore=tests/e2e
+
+# Run e2e tests (requires Docker demo running)
+test-e2e:
+	@echo "Make sure docker demo is running: make docker-run"
+	DESKPILOT_E2E=1 .venv/bin/pytest tests/e2e/ -v --tb=short
 
 # Run linter
 lint:
-	ruff check src/ tests/
-	ruff format --check src/ tests/
+	.venv/bin/ruff check src/ tests/
+	.venv/bin/ruff format --check src/ tests/
 
 # Format code
 format:
-	ruff check --fix src/ tests/
-	ruff format src/ tests/
+	.venv/bin/ruff check --fix src/ tests/
+	.venv/bin/ruff format src/ tests/
 
 # Type checking
 typecheck:
-	mypy src/deskpilot/
+	.venv/bin/mypy src/deskpilot/
 
 # Run the main application
 run:
-	deskpilot --help
-
-# Run setup wizard
-setup:
-	deskpilot setup
+	.venv/bin/deskpilot --help
 
 # Run demo
 demo:
-	deskpilot demo
+	.venv/bin/deskpilot demo
 
 # Show configuration
 config:
-	deskpilot config
+	.venv/bin/deskpilot config
 
 # Check system status
 status:
-	deskpilot status
+	.venv/bin/deskpilot status
 
 # Take a screenshot
 screenshot:
-	deskpilot screenshot --save
+	.venv/bin/deskpilot screenshot --save
 
 # Open Python shell with deskpilot
 shell:
@@ -127,14 +123,19 @@ release: clean build
 pull-model:
 	ollama pull qwen2.5:3b
 
-# Start VM (Docker Compose)
-vm-up:
-	docker-compose up -d
+# Docker demo targets
+docker-build:
+	docker build -f docker/Dockerfile.demo -t deskpilot/demo:latest .
 
-# Stop VM
-vm-down:
+docker-run:
+	docker-compose up -d
+	@echo ""
+	@echo "Demo container starting..."
+	@echo "Open http://localhost:8006 in your browser"
+	@echo ""
+
+docker-stop:
 	docker-compose down
 
-# View VM logs
-vm-logs:
-	docker-compose logs -f
+docker-push:
+	docker push deskpilot/demo:latest
