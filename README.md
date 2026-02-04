@@ -192,12 +192,13 @@ agent:
 
 ## Agent Personalization
 
-DeskPilot uses a multi-file configuration pattern for personalized automation:
+DeskPilot uses a multi-file configuration pattern for personalized automation. Each file serves a specific purpose:
 
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
-flowchart LR
+flowchart TB
     subgraph config["~/.openclaw/skills/computer-use/"]
+        skill["SKILL.md<br/>Commands & Capabilities"]
         soul["SOUL.md<br/>Agent Personality"]
         user["USER.md<br/>Your Context"]
         memory["MEMORY.md<br/>Persistent Knowledge"]
@@ -205,12 +206,14 @@ flowchart LR
         cron["CRON.md<br/>Scheduled Tasks"]
     end
 
-    soul --> |"how to communicate"| agent["DeskPilot Agent"]
+    skill --> |"what I can do"| agent["DeskPilot Agent"]
+    soul --> |"how to communicate"| agent
     user --> |"who am I helping"| agent
     memory --> |"what I remember"| agent
     heartbeat --> |"what to monitor"| agent
     cron --> |"when to act"| agent
 
+    style skill fill:#e91e63,stroke:#c2185b,color:#fff
     style soul fill:#4a86e8,stroke:#2d5aa3,color:#fff
     style user fill:#ff6600,stroke:#cc5200,color:#fff
     style memory fill:#00aa55,stroke:#007a3d,color:#fff
@@ -219,6 +222,17 @@ flowchart LR
     style agent fill:#1a1a2e,stroke:#4a86e8,color:#fff
     style config fill:#0f3460,stroke:#4a86e8
 ```
+
+### File Roles
+
+| File | Role | Description |
+|------|------|-------------|
+| **SKILL.md** | Capabilities | Defines commands, tools, and what the agent can do |
+| **SOUL.md** | Personality | How the agent communicates, tone, boundaries |
+| **USER.md** | Context | Who you are, your workflows, preferences |
+| **MEMORY.md** | Knowledge | Corrections, learnings, session history |
+| **HEARTBEAT.md** | Monitoring | Proactive checks and alerts |
+| **CRON.md** | Scheduling | Automated tasks at specific times |
 
 ### Essential: Configure USER.md
 
@@ -243,15 +257,16 @@ notepad %USERPROFILE%\.openclaw\skills\computer-use\USER.md
 
 > **Tip:** Use voice transcription to quickly describe your workflows. Talk for 10-15 minutes about how you work, then paste the transcript into USER.md.
 
-### File Purposes
+### Update Frequency
 
-| File | Purpose | Update Frequency |
-|------|---------|------------------|
-| **USER.md** | Your context, projects, preferences | Weekly (as priorities shift) |
-| **SOUL.md** | Agent communication style, boundaries | Rarely (only if tone is wrong) |
-| **MEMORY.md** | Persistent corrections and learnings | Automatic + weekly cleanup |
-| **HEARTBEAT.md** | Proactive monitoring checks | As needed |
-| **CRON.md** | Scheduled automation tasks | As needed |
+| File | When to Update |
+|------|----------------|
+| **SKILL.md** | When adding new commands or capabilities |
+| **USER.md** | Weekly (as priorities shift) |
+| **SOUL.md** | Rarely (only if tone/style is wrong) |
+| **MEMORY.md** | Automatic + weekly cleanup |
+| **HEARTBEAT.md** | As monitoring needs change |
+| **CRON.md** | As scheduled tasks evolve |
 
 ### Example: Developer Setup
 

@@ -24,7 +24,7 @@ services:
     # Port mappings
     ports:
       - "8006:8006"   # noVNC web interface (access via browser)
-      - "5900:5900"   # VNC direct access (optional)
+      - "5901:5900"   # VNC direct access (optional, mapped to 5901 to avoid conflicts)
 
     # Persistent storage
     volumes:
