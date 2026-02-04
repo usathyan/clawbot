@@ -257,7 +257,7 @@ brew install lume
 lume create --os macOS --ipsw latest deskpilot-vm
 
 # Start the VM
-lume start deskpilot-vm
+lume run deskpilot-vm
 
 # Configure DeskPilot to use it
 cat > config/local.yaml << 'EOF'
