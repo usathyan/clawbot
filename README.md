@@ -190,7 +190,7 @@ agent:
 
 ---
 
-## Agent Personalization
+## The Heart of DeskPilot
 
 DeskPilot uses a multi-file configuration pattern for personalized automation. Each file serves a specific purpose:
 
