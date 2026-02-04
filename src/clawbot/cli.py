@@ -342,7 +342,9 @@ def config(ctx: click.Context) -> None:
     table.add_row("Log Level", cfg.logging.level)
 
     if cfg.deployment.mode == "vm":
-        table.add_row("VM Image", cfg.vm.image)
+        table.add_row("VM OS Type", cfg.vm.os_type)
+        table.add_row("VM Provider", cfg.vm.provider_type)
+        table.add_row("VM Display", cfg.vm.display)
         table.add_row("VM RAM", cfg.vm.ram_size)
         table.add_row("VM CPUs", str(cfg.vm.cpu_cores))
 

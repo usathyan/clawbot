@@ -84,6 +84,7 @@ class VMComputer(BaseComputer):
     def __init__(self, config: ClawBotConfig) -> None:
         self.config = config
         self._computer = None
+        self._interface = None
         self._connected = False
 
     async def connect(self) -> None:
@@ -96,58 +97,77 @@ class VMComputer(BaseComputer):
             ) from e
 
         self._computer = Computer(
-            os_type="windows",
-            provider_type="docker",
-            name=self.config.vm.image,
+            os_type=self.config.vm.os_type,
+            provider_type=self.config.vm.provider_type,
+            display=self.config.vm.display,
+            memory=self.config.vm.ram_size,
+            cpu=str(self.config.vm.cpu_cores),
         )
-        # Cua Computer connects automatically when used
+        # Get the interface for input operations
+        self._interface = self._computer.interface
         self._connected = True
 
     async def disconnect(self) -> None:
         """Disconnect from the VM."""
         if self._computer:
-            # Cua handles cleanup automatically
+            try:
+                self._computer.stop()
+            except Exception:
+                pass  # Ignore cleanup errors
             self._computer = None
+            self._interface = None
         self._connected = False
 
     async def screenshot(self) -> Image.Image:
         """Capture screenshot from VM."""
-        if not self._computer:
+        if not self._interface:
             raise RuntimeError("Not connected to VM")
-        return await self._computer.screenshot()
+        # Cua interface methods are sync, run in thread
+        return await asyncio.to_thread(self._interface.screenshot)
 
     async def click(self, x: int, y: int, button: str = "left") -> None:
         """Click in VM."""
-        if not self._computer:
+        if not self._interface:
             raise RuntimeError("Not connected to VM")
-        await self._computer.click(x, y, button=button)
+        if button == "left":
+            await asyncio.to_thread(self._interface.left_click, x, y)
+        elif button == "right":
+            await asyncio.to_thread(self._interface.right_click, x, y)
+        else:
+            await asyncio.to_thread(self._interface.left_click, x, y)
 
     async def double_click(self, x: int, y: int) -> None:
         """Double-click in VM."""
-        if not self._computer:
+        if not self._interface:
             raise RuntimeError("Not connected to VM")
-        await self._computer.double_click(x, y)
+        await asyncio.to_thread(self._interface.double_click, x, y)
 
     async def type_text(self, text: str) -> None:
         """Type text in VM."""
-        if not self._computer:
+        if not self._interface:
             raise RuntimeError("Not connected to VM")
-        await self._computer.type(text)
+        await asyncio.to_thread(self._interface.type_text, text)
 
     async def press_key(self, key: str) -> None:
         """Press key in VM."""
-        if not self._computer:
+        if not self._interface:
             raise RuntimeError("Not connected to VM")
-        await self._computer.press(key)
+        await asyncio.to_thread(self._interface.press_key, key)
 
     async def hotkey(self, *keys: str) -> None:
         """Press hotkey in VM."""
-        if not self._computer:
+        if not self._interface:
             raise RuntimeError("Not connected to VM")
-        await self._computer.hotkey(*keys)
+        await asyncio.to_thread(self._interface.hotkey, *keys)
 
     def get_screen_info(self) -> ScreenInfo:
         """Get VM screen info."""
+        if self._interface:
+            try:
+                size = self._interface.get_screen_size()
+                return ScreenInfo(width=size[0], height=size[1])
+            except Exception:
+                pass
         # Default Windows VM resolution
         return ScreenInfo(width=1920, height=1080)
 

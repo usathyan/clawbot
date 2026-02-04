@@ -12,7 +12,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class VMConfig(BaseModel):
     """VM deployment configuration."""
 
-    image: str = "trycua/cua-qemu-windows:latest"
+    os_type: Literal["macos", "linux", "windows", "android"] = "macos"
+    provider_type: Literal["lume", "docker", "cloud"] = "lume"
+    display: str = "1920x1080"
     ram_size: str = "8G"
     cpu_cores: int = 4
     disk_size: str = "64G"
