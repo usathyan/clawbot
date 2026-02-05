@@ -33,6 +33,10 @@ services:
 
     # VM configuration
     environment:
+      # KVM disabled for macOS/Windows hosts (no nested virtualization)
+      # On Linux with KVM, remove this line for better performance
+      KVM: "N"
+
       # Resources
       RAM_SIZE: ${DESKPILOT_RAM:-8G}
       CPU_CORES: ${DESKPILOT_CPUS:-4}
