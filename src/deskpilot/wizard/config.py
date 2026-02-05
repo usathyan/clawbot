@@ -17,6 +17,26 @@ class NativeConfig(BaseModel):
     click_pause: float = 0.1
 
 
+class WinAppDriverConfig(BaseModel):
+    """WinAppDriver configuration (Windows only)."""
+
+    enabled: bool = True
+    path: str = r"C:\Program Files\Windows Application Driver\WinAppDriver.exe"
+    port: int = 4723
+    auto_start: bool = True
+    timeout: float = 10.0
+
+
+class WindowsConfig(BaseModel):
+    """Windows-specific configuration with WinAppDriver support."""
+
+    winappdriver: WinAppDriverConfig = Field(default_factory=WinAppDriverConfig)
+    screenshot_delay: float = 0.5
+    typing_interval: float = 0.05
+    click_pause: float = 0.1
+    fallback_on_failure: bool = True
+
+
 class ModelConfig(BaseModel):
     """AI model configuration."""
 
@@ -63,6 +83,7 @@ class DeskPilotConfig(BaseSettings):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     openclaw: OpenClawConfig = Field(default_factory=OpenClawConfig)
     native: NativeConfig = Field(default_factory=NativeConfig)
+    windows: WindowsConfig = Field(default_factory=WindowsConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 

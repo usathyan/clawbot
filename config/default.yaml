@@ -20,11 +20,24 @@ openclaw:
   daemon_url: http://localhost:3000
   auto_start_tui: true
 
-# Native control settings
+# Native control settings (macOS/Linux)
 native:
   screenshot_delay: 0.5  # seconds to wait before capture
   typing_interval: 0.05  # seconds between keystrokes
   click_pause: 0.1  # seconds after click
+
+# Windows-specific settings (WinAppDriver + pyautogui fallback)
+windows:
+  winappdriver:
+    enabled: true
+    path: "C:\\Program Files\\Windows Application Driver\\WinAppDriver.exe"
+    port: 4723
+    auto_start: true
+    timeout: 10.0
+  screenshot_delay: 0.5
+  typing_interval: 0.05
+  click_pause: 0.1
+  fallback_on_failure: true
 
 # Logging
 logging:
