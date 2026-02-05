@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0066CC" alt="Platform">
   <img src="https://img.shields.io/badge/AI-100%25%20Local-00AA55" alt="AI">
   <img src="https://img.shields.io/badge/GPU-Not%20Required-FF6600" alt="GPU">
+  <img src="https://img.shields.io/badge/Version-2.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/Status-Proof%20of%20Concept-yellow" alt="Status">
   <img src="https://img.shields.io/badge/License-MIT-AAAAAA" alt="License">
 </p>
@@ -28,13 +29,14 @@ DeskPilot transforms any computer into an AI-powered automation platform. It use
 - **100% Local** - All AI processing happens on your machine, no cloud required
 - **Natural Language** - Control apps with commands like "Open Calculator and compute 15 * 8"
 - **Universal** - Works with any application that has a GUI
+- **WinAppDriver Integration** - Element-based clicking via Windows UI Automation (Windows)
 - **Air-Gapped Ready** - Fully offline capable after initial setup
 
 ---
 
 ## Architecture
 
-DeskPilot runs **directly on your machine** and controls applications natively:
+DeskPilot runs **directly on your machine** and controls applications natively. On Windows, it uses WinAppDriver (UI Automation APIs) for accurate element-based clicks, with pyautogui as a universal fallback:
 
 ```mermaid
 %%{init: {'theme': 'neutral', 'themeVariables': { 'primaryColor': '#4a86e8', 'primaryTextColor': '#fff', 'primaryBorderColor': '#2d5aa3', 'lineColor': '#6c757d', 'secondaryColor': '#f8f9fa', 'tertiaryColor': '#e9ecef'}}}%%
@@ -45,9 +47,13 @@ flowchart TB
         end
 
         subgraph core["Core Components"]
-            agent["DeskPilot<br/>Agent"]
-            ollama["Ollama AI<br/>(qwen2.5)"]
-            native["pyautogui<br/>+ mss"]
+            agent["OllamaAgent"]
+            ollama["Ollama AI<br/>(vision model)"]
+        end
+
+        subgraph control["Computer Control"]
+            wad["WinAppDriver<br/>(Windows UI Automation)"]
+            native["pyautogui + mss<br/>(fallback / macOS / Linux)"]
         end
 
         subgraph apps["Desktop Applications"]
@@ -56,17 +62,21 @@ flowchart TB
 
         tui --> agent
         agent <--> ollama
+        agent --> wad
         agent --> native
-        native --> calc
+        wad -->|"element.Click()"| calc
+        native -->|"coordinate click"| calc
     end
 
     style computer fill:#1a1a2e,stroke:#4a86e8,stroke-width:2px
     style ui fill:#16213e,stroke:#4a86e8
     style core fill:#0f3460,stroke:#4a86e8
+    style control fill:#1a1a2e,stroke:#ff6600
     style apps fill:#1a1a2e,stroke:#4a86e8
     style tui fill:#4a86e8,stroke:#2d5aa3,color:#fff
     style agent fill:#4a86e8,stroke:#2d5aa3,color:#fff
     style ollama fill:#00aa55,stroke:#007a3d,color:#fff
+    style wad fill:#9c27b0,stroke:#7b1fa2,color:#fff
     style native fill:#ff6600,stroke:#cc5200,color:#fff
     style calc fill:#6c757d,stroke:#495057,color:#fff
 ```
@@ -353,26 +363,29 @@ sequenceDiagram
 ```
 deskpilot/
 ├── src/deskpilot/
-│   ├── cli.py              # CLI commands
-│   ├── installer/          # Native installer
-│   ├── cua_bridge/         # Computer control layer
-│   │   ├── computer.py     # NativeComputer, MockComputer
-│   │   ├── actions.py      # High-level actions
-│   │   └── agent.py        # AI agent
+│   ├── cli.py                  # CLI commands
+│   ├── installer/
+│   │   ├── native.py           # Native installer
+│   │   └── winappdriver.py     # WinAppDriver installer (Windows)
+│   ├── cua_bridge/             # Computer control layer
+│   │   ├── computer.py         # NativeComputer, WindowsComputer, MockComputer
+│   │   ├── winappdriver.py     # WinAppDriver REST API client
+│   │   ├── actions.py          # High-level actions
+│   │   └── agent.py            # OllamaAgent (AI reasoning loop)
 │   ├── wizard/
-│   │   ├── config.py       # Configuration management
-│   │   ├── setup.py        # Status checking
-│   │   └── demo.py         # Calculator demo
-│   └── openclaw_skill/     # OpenClaw integration
+│   │   ├── config.py           # Configuration (incl. WindowsConfig)
+│   │   ├── setup.py            # Status checking
+│   │   └── demo.py             # Calculator demo
+│   └── openclaw_skill/         # OpenClaw integration
 ├── config/
-│   └── default.yaml        # Default configuration
+│   └── default.yaml            # Default configuration
 ├── docker/
-│   ├── Dockerfile.demo     # Demo container
-│   └── setup-demo.ps1      # Windows setup script
+│   ├── Dockerfile.demo         # Demo container
+│   └── setup-demo.ps1          # Windows setup script
 ├── scripts/
-│   ├── install.sh          # macOS/Linux installer
-│   └── install.ps1         # Windows installer
-└── tests/                  # Test suite
+│   ├── install.sh              # macOS/Linux installer
+│   └── install.ps1             # Windows installer (+WinAppDriver)
+└── tests/                      # 91 tests
 ```
 
 ---
@@ -399,6 +412,42 @@ make format
 
 ---
 
+## WinAppDriver Integration (Windows)
+
+On Windows, DeskPilot uses [WinAppDriver](https://github.com/microsoft/WinAppDriver) for element-based click operations via Windows UI Automation APIs. This is more accurate than pixel-coordinate clicking because it targets the actual UI element rather than a screen position.
+
+**How it works:**
+1. AI agent analyzes the screen and outputs `click(x, y)` coordinates
+2. `WindowsComputer.click()` sends coordinates to WinAppDriver
+3. WinAppDriver finds the UI element at that point via the accessibility tree
+4. If found: `element.Click()` (accurate, works even if window shifts)
+5. If not found: falls back to `pyautogui.click(x, y)` (universal)
+
+**Setup on Windows:**
+```powershell
+# The installer handles everything
+deskpilot install
+
+# Or manually:
+# 1. Enable Developer Mode (Settings > For developers)
+# 2. Install WinAppDriver from https://github.com/microsoft/WinAppDriver/releases
+```
+
+**Configuration:**
+```yaml
+# config/local.yaml
+windows:
+  winappdriver:
+    enabled: true        # Set to false to use pyautogui only
+    port: 4723
+    auto_start: true     # Auto-launch WinAppDriver.exe
+  fallback_on_failure: true  # Fall back to pyautogui on error
+```
+
+On macOS/Linux, DeskPilot uses `NativeComputer` (pyautogui + mss) for all operations.
+
+---
+
 ## Limitations (Proof of Concept)
 
 - **AI Accuracy**: The AI may misinterpret screens or make incorrect clicks
@@ -411,15 +460,19 @@ make format
 
 ## Roadmap
 
-- [x] Core automation engine
+- [x] Core automation engine (v1)
 - [x] Multi-platform support
 - [x] Calculator demo
 - [x] Native installer
 - [x] Docker demo environment
-- [ ] Improved AI accuracy
+- [x] OllamaAgent - direct Ollama API integration (v2)
+- [x] WinAppDriver integration - element-based clicking (v2)
+- [ ] Vision model integration (llava:7b / llama3.2-vision)
+- [ ] Action verification (screenshot diff after each action)
+- [ ] Explicit waits (replace fixed sleeps with element detection)
+- [ ] Error recovery loops (agent re-plans on failure)
 - [ ] Skill marketplace
 - [ ] Visual skill builder
-- [ ] Scheduled triggers
 
 ---
 

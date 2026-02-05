@@ -20,13 +20,23 @@ All 9 phases of the DeskPilot v2 reengineering plan have been implemented:
 8. **Updated Tests** - 66 tests, all passing
 9. **Updated Makefile** - Docker targets included
 
-### Agent Rewrite (Latest Change)
+### Agent Rewrite
 Replaced the `cua-agent` dependency with a native `OllamaAgent` class in `src/deskpilot/cua_bridge/agent.py`:
 - Talks to Ollama HTTP API directly (no external server needed)
 - Sends screenshots as base64 images for vision analysis
 - Parses JSON action responses from the model
 - Executes actions via NativeComputer (pyautogui + mss)
 - Platform-aware app launching (Spotlight on macOS, Start menu on Windows)
+
+### WinAppDriver Integration (Latest Change)
+Added Windows UI Automation support via WinAppDriver:
+- `src/deskpilot/cua_bridge/winappdriver.py` - WinAppDriver REST API client (httpx)
+- `WindowsComputer` class in `computer.py` - hybrid WinAppDriver + pyautogui fallback
+- `WinAppDriverConfig` / `WindowsConfig` in config.py
+- `src/deskpilot/installer/winappdriver.py` - WinAppDriver download/install module
+- Updated `install.ps1` with Developer Mode + WinAppDriver installation
+- 25 new tests (91 total, all passing)
+- Factory auto-selects `WindowsComputer` on Windows, `NativeComputer` elsewhere
 
 ---
 
@@ -42,7 +52,7 @@ Replaced the `cua-agent` dependency with a native `OllamaAgent` class in `src/de
 | `deskpilot launch Calculator` | **Working** | Uses Spotlight |
 | `open -a Calculator` | **Working** | Direct macOS launch |
 | `deskpilot run "task"` | **Needs Vision Model** | See below |
-| `make test` (66 tests) | **All Passing** | |
+| `make test` (91 tests) | **All Passing** | |
 
 ---
 
@@ -91,8 +101,10 @@ The Docker demo image (`make docker-build`) has not been built/tested. It requir
 | File | Description |
 |------|-------------|
 | `src/deskpilot/cua_bridge/agent.py` | OllamaAgent - AI reasoning loop |
-| `src/deskpilot/cua_bridge/computer.py` | NativeComputer + MockComputer |
+| `src/deskpilot/cua_bridge/computer.py` | NativeComputer, WindowsComputer, MockComputer |
+| `src/deskpilot/cua_bridge/winappdriver.py` | WinAppDriver REST API client |
 | `src/deskpilot/cua_bridge/actions.py` | High-level action abstraction |
+| `src/deskpilot/installer/winappdriver.py` | WinAppDriver installer module |
 | `src/deskpilot/cli.py` | All CLI commands |
 | `src/deskpilot/installer/native.py` | NativeInstaller class |
 | `src/deskpilot/wizard/config.py` | Pydantic config models |

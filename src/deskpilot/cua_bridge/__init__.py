@@ -12,6 +12,7 @@ from deskpilot.cua_bridge.computer import (
     BaseComputer,
     MockComputer,
     NativeComputer,
+    WindowsComputer,
     get_computer,
 )
 
@@ -19,6 +20,7 @@ __all__ = [
     # Computer classes
     "BaseComputer",
     "NativeComputer",
+    "WindowsComputer",
     "MockComputer",
     "get_computer",
     # Actions

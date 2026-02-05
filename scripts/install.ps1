@@ -209,6 +209,67 @@ function Test-Installation {
     } catch {
         Write-Host "  [!] Ollama service not responding" -ForegroundColor Yellow
     }
+
+    $wadPath = "C:\Program Files\Windows Application Driver\WinAppDriver.exe"
+    if (Test-Path $wadPath) {
+        Write-Host "  [OK] WinAppDriver installed" -ForegroundColor Green
+    } else {
+        Write-Host "  [!] WinAppDriver not found" -ForegroundColor Yellow
+    }
+}
+
+# Enable Developer Mode (required for WinAppDriver)
+function Enable-DeveloperMode {
+    Write-Host "Checking Developer Mode..." -ForegroundColor Blue
+
+    $devMode = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowDevelopmentWithoutDevLicense" -ErrorAction SilentlyContinue
+
+    if ($devMode.AllowDevelopmentWithoutDevLicense -eq 1) {
+        Write-Host "  [OK] Developer Mode already enabled" -ForegroundColor Green
+        return
+    }
+
+    Write-Host "  Developer Mode is required for WinAppDriver." -ForegroundColor Yellow
+    $confirm = Read-Host "  Enable Developer Mode? (Y/n)"
+
+    if ($confirm -eq "" -or $confirm -eq "Y" -or $confirm -eq "y") {
+        try {
+            Start-Process powershell -Verb RunAs -ArgumentList "-Command", "reg add 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' /v AllowDevelopmentWithoutDevLicense /t REG_DWORD /d 1 /f" -Wait
+            Write-Host "  [OK] Developer Mode enabled" -ForegroundColor Green
+        } catch {
+            Write-Host "  [!] Could not enable Developer Mode" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "  Skipped. WinAppDriver may not work properly." -ForegroundColor Yellow
+    }
+}
+
+# Install WinAppDriver
+function Install-WinAppDriver {
+    Write-Host "Installing WinAppDriver..." -ForegroundColor Blue
+
+    $wadPath = "C:\Program Files\Windows Application Driver\WinAppDriver.exe"
+
+    if (Test-Path $wadPath) {
+        Write-Host "  [OK] WinAppDriver already installed" -ForegroundColor Green
+        return
+    }
+
+    $wadUrl = "https://github.com/microsoft/WinAppDriver/releases/download/v1.2.1/WindowsApplicationDriver_1.2.1.msi"
+    $wadInstaller = "$env:TEMP\WinAppDriver.msi"
+
+    Write-Host "  Downloading WinAppDriver..."
+    try {
+        Invoke-WebRequest -Uri $wadUrl -OutFile $wadInstaller
+
+        Write-Host "  Running installer..."
+        Start-Process msiexec.exe -ArgumentList "/i", $wadInstaller, "/quiet", "/norestart" -Wait
+
+        Remove-Item $wadInstaller -Force -ErrorAction SilentlyContinue
+        Write-Host "  [OK] WinAppDriver installed" -ForegroundColor Green
+    } catch {
+        Write-Host "  [X] Failed to install WinAppDriver: $_" -ForegroundColor Red
+    }
 }
 
 # Main
@@ -241,6 +302,12 @@ if (-not $SkipOpenClaw) {
         Write-Host "Skipping OpenClaw (Node.js 18+ required)" -ForegroundColor Yellow
     }
 }
+
+# Enable Developer Mode (required for WinAppDriver)
+Enable-DeveloperMode
+
+# Install WinAppDriver
+Install-WinAppDriver
 
 # Install DeskPilot
 Install-DeskPilot -DevMode:$Dev

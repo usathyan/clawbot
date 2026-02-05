@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import platform
+import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from deskpilot.wizard.config import DeskPilotConfig, get_config
 
 if TYPE_CHECKING:
     from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -173,6 +179,188 @@ class NativeComputer(BaseComputer):
         return self._connected
 
 
+class WindowsComputer(BaseComputer):
+    """Windows desktop control via WinAppDriver + pyautogui fallback.
+
+    Uses WinAppDriver (Windows UI Automation APIs) for click operations
+    to get element-based accuracy, with pyautogui as a fallback when
+    no element is found. Screenshots and keyboard input still use
+    pyautogui/mss for speed.
+    """
+
+    def __init__(self, config: DeskPilotConfig) -> None:
+        self.config = config
+        self._connected = False
+        self._wad = None  # WinAppDriverClient
+        self._wad_process: subprocess.Popen | None = None
+        self._pyautogui = None
+        self._mss = None
+
+    async def connect(self) -> None:
+        """Initialize WinAppDriver and fallback libraries."""
+        try:
+            import mss
+            import pyautogui
+
+            self._pyautogui = pyautogui
+            self._mss = mss.mss()
+            pyautogui.PAUSE = self.config.windows.click_pause
+            pyautogui.FAILSAFE = True
+        except ImportError as e:
+            raise ImportError(
+                "Windows mode requires pyautogui and mss. "
+                "Run: pip install deskpilot"
+            ) from e
+
+        # Start WinAppDriver if configured
+        wad_config = self.config.windows.winappdriver
+        if wad_config.enabled:
+            from deskpilot.cua_bridge.winappdriver import WinAppDriverClient
+
+            if wad_config.auto_start:
+                self._wad_process = await self._start_winappdriver()
+
+            self._wad = WinAppDriverClient(
+                port=wad_config.port,
+                timeout=wad_config.timeout,
+            )
+            try:
+                await self._wad.create_session()
+                logger.info("WinAppDriver connected on port %d", wad_config.port)
+            except Exception as e:
+                logger.warning("WinAppDriver unavailable, using pyautogui only: %s", e)
+                self._wad = None
+
+        self._connected = True
+
+    async def disconnect(self) -> None:
+        """Cleanup all resources."""
+        if self._wad:
+            await self._wad.close_session()
+            self._wad = None
+
+        if self._wad_process:
+            self._wad_process.terminate()
+            self._wad_process.wait(timeout=5)
+            self._wad_process = None
+
+        if self._mss:
+            self._mss.close()
+            self._mss = None
+
+        self._pyautogui = None
+        self._connected = False
+
+    async def screenshot(self) -> Image.Image:
+        """Capture screenshot via mss (fast)."""
+        if not self._mss:
+            raise RuntimeError("Not connected")
+
+        from PIL import Image
+
+        def capture():
+            monitor = self._mss.monitors[1]
+            sct_img = self._mss.grab(monitor)
+            return Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
+
+        return await asyncio.to_thread(capture)
+
+    async def click(self, x: int, y: int, button: str = "left") -> None:
+        """Click using WinAppDriver element detection with pyautogui fallback."""
+        if not self._pyautogui:
+            raise RuntimeError("Not connected")
+
+        # Try WinAppDriver for left-clicks when available
+        if button == "left" and self._wad:
+            try:
+                element = await self._wad.element_from_point(x, y)
+                if element:
+                    await element.click()
+                    logger.debug("WinAppDriver click at (%d, %d)", x, y)
+                    return
+            except Exception as e:
+                if not self.config.windows.fallback_on_failure:
+                    raise
+                logger.debug("WinAppDriver click failed, falling back: %s", e)
+
+        # Fallback to pyautogui coordinate-based click
+        await asyncio.to_thread(self._pyautogui.click, x, y, button=button)
+
+    async def double_click(self, x: int, y: int) -> None:
+        """Double-click using WinAppDriver with pyautogui fallback."""
+        if not self._pyautogui:
+            raise RuntimeError("Not connected")
+
+        if self._wad:
+            try:
+                element = await self._wad.element_from_point(x, y)
+                if element:
+                    await element.double_click()
+                    return
+            except Exception as e:
+                if not self.config.windows.fallback_on_failure:
+                    raise
+                logger.debug("WinAppDriver double_click failed, falling back: %s", e)
+
+        await asyncio.to_thread(self._pyautogui.doubleClick, x, y)
+
+    async def type_text(self, text: str) -> None:
+        """Type via pyautogui."""
+        if not self._pyautogui:
+            raise RuntimeError("Not connected")
+        await asyncio.to_thread(
+            self._pyautogui.write, text, interval=self.config.windows.typing_interval
+        )
+
+    async def press_key(self, key: str) -> None:
+        """Press key via pyautogui."""
+        if not self._pyautogui:
+            raise RuntimeError("Not connected")
+        await asyncio.to_thread(self._pyautogui.press, key)
+
+    async def hotkey(self, *keys: str) -> None:
+        """Key combination via pyautogui."""
+        if not self._pyautogui:
+            raise RuntimeError("Not connected")
+        await asyncio.to_thread(self._pyautogui.hotkey, *keys)
+
+    def get_screen_info(self) -> ScreenInfo:
+        """Get primary monitor dimensions."""
+        if not self._mss:
+            raise RuntimeError("Not connected")
+        monitor = self._mss.monitors[1]
+        return ScreenInfo(width=monitor["width"], height=monitor["height"])
+
+    @property
+    def is_connected(self) -> bool:
+        return self._connected
+
+    @property
+    def has_winappdriver(self) -> bool:
+        """Check if WinAppDriver is active (not just pyautogui fallback)."""
+        return self._wad is not None
+
+    async def _start_winappdriver(self) -> subprocess.Popen | None:
+        """Start WinAppDriver.exe process."""
+        wad_path = Path(self.config.windows.winappdriver.path)
+        if not wad_path.exists():
+            logger.warning(
+                "WinAppDriver not found at %s. Run 'deskpilot install' to install it.",
+                wad_path,
+            )
+            return None
+
+        process = subprocess.Popen(
+            [str(wad_path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        # Wait for WinAppDriver to be ready
+        await asyncio.sleep(1)
+        return process
+
+
 class MockComputer(BaseComputer):
     """Mock computer for testing without actual native control."""
 
@@ -222,17 +410,25 @@ class MockComputer(BaseComputer):
 def get_computer(config: DeskPilotConfig | None = None, mock: bool = False) -> BaseComputer:
     """Factory function to create appropriate Computer instance.
 
+    On Windows with WinAppDriver enabled, returns WindowsComputer
+    (WinAppDriver + pyautogui fallback). Otherwise returns NativeComputer
+    (pyautogui + mss only).
+
     Args:
         config: Configuration. If None, loads from default locations.
         mock: If True, return MockComputer for testing.
 
     Returns:
-        BaseComputer instance (NativeComputer or MockComputer).
+        BaseComputer instance.
     """
     if config is None:
         config = get_config()
 
     if mock:
         return MockComputer(config)
+
+    # Use WindowsComputer on Windows when WinAppDriver is enabled
+    if platform.system() == "Windows" and config.windows.winappdriver.enabled:
+        return WindowsComputer(config)
 
     return NativeComputer(config)
