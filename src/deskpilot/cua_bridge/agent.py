@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
+import io
+import json
+import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+import httpx
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -49,11 +54,34 @@ class AgentResult:
         return len(self.steps)
 
 
-class DeskPilotAgent:
-    """AI Agent that can see and control computers.
+SYSTEM_PROMPT = """You are a computer automation agent. You can see the screen and control the mouse and keyboard.
 
-    Uses Cua's ComputerAgent with Ollama for local inference.
-    """
+Available actions:
+- click(x, y): Click at screen coordinates
+- double_click(x, y): Double-click at coordinates
+- type(text): Type text into the focused element
+- press(key): Press a key (enter, escape, tab, etc.)
+- hotkey(keys): Press key combination (e.g., "ctrl+c", "cmd+space")
+- launch(app): Launch an application by name
+- done(result): Task is complete, provide the result
+
+Respond with JSON in this format:
+{
+    "reasoning": "Brief explanation of what you see and plan to do",
+    "action": "action_name",
+    "params": {"param1": "value1"}
+}
+
+Important:
+- Coordinates are in pixels from top-left (0,0)
+- Look carefully at the screenshot to find UI elements
+- Use "done" when the task is complete
+- Be precise with click coordinates - aim for the center of buttons/elements
+"""
+
+
+class OllamaAgent:
+    """AI Agent using Ollama directly for vision + control."""
 
     def __init__(
         self,
@@ -62,109 +90,198 @@ class DeskPilotAgent:
     ) -> None:
         self.computer = computer
         self.config = config or get_config()
-        self._agent = None
+        self._client = None
         self._initialized = False
 
     async def initialize(self) -> None:
-        """Initialize the Cua ComputerAgent."""
+        """Initialize the Ollama client."""
         if self._initialized:
             return
 
-        try:
-            from agent import ComputerAgent
-        except ImportError as e:
-            raise ImportError(
-                "cua-agent package not installed. Run: uv pip install cua-agent"
-            ) from e
-
-        # Build model string for liteLLM
-        model_config = self.config.model
-        if model_config.provider == "ollama":
-            model_str = f"ollama/{model_config.name}"
-        else:
-            model_str = model_config.name
-
-        # Create ComputerAgent with our computer instance
-        self._agent = ComputerAgent(
-            model=model_str,
-            computer=self.computer._computer if hasattr(self.computer, "_computer") else None,
+        self._client = httpx.AsyncClient(
+            base_url=self.config.model.base_url,
+            timeout=120.0,
         )
         self._initialized = True
+
+    async def _encode_image(self, image: Image.Image) -> str:
+        """Encode PIL Image to base64."""
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    async def _call_ollama(self, prompt: str, image: Image.Image | None = None) -> str:
+        """Call Ollama API with optional image."""
+        if not self._client:
+            raise RuntimeError("Agent not initialized")
+
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+        ]
+
+        # Build user message with optional image
+        if image:
+            image_b64 = await self._encode_image(image)
+            messages.append({
+                "role": "user",
+                "content": prompt,
+                "images": [image_b64],
+            })
+        else:
+            messages.append({"role": "user", "content": prompt})
+
+        response = await self._client.post(
+            "/api/chat",
+            json={
+                "model": self.config.model.name,
+                "messages": messages,
+                "stream": False,
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("message", {}).get("content", "")
+
+    def _parse_response(self, response: str) -> dict:
+        """Parse JSON response from Ollama."""
+        # Try to extract JSON from response
+        try:
+            # Look for JSON block
+            json_match = re.search(r'\{[^{}]*\}', response, re.DOTALL)
+            if json_match:
+                return json.loads(json_match.group())
+        except json.JSONDecodeError:
+            pass
+
+        # Fallback: return error
+        return {
+            "reasoning": response,
+            "action": "done",
+            "params": {"result": "Could not parse response"},
+        }
+
+    async def _execute_action(self, action: str, params: dict) -> str:
+        """Execute an action on the computer."""
+        try:
+            if action == "click":
+                await self.computer.click(params.get("x", 0), params.get("y", 0))
+                return f"Clicked at ({params.get('x')}, {params.get('y')})"
+
+            elif action == "double_click":
+                await self.computer.double_click(params.get("x", 0), params.get("y", 0))
+                return f"Double-clicked at ({params.get('x')}, {params.get('y')})"
+
+            elif action == "type":
+                await self.computer.type_text(params.get("text", ""))
+                return f"Typed: {params.get('text')}"
+
+            elif action == "press":
+                await self.computer.press_key(params.get("key", ""))
+                return f"Pressed: {params.get('key')}"
+
+            elif action == "hotkey":
+                keys = params.get("keys", "").split("+")
+                await self.computer.hotkey(*keys)
+                return f"Pressed hotkey: {params.get('keys')}"
+
+            elif action == "launch":
+                # Use spotlight/start menu
+                import platform
+                if platform.system() == "Darwin":
+                    await self.computer.hotkey("cmd", "space")
+                    await asyncio.sleep(0.5)
+                    await self.computer.type_text(params.get("app", ""))
+                    await asyncio.sleep(0.3)
+                    await self.computer.press_key("enter")
+                elif platform.system() == "Windows":
+                    await self.computer.press_key("win")
+                    await asyncio.sleep(0.5)
+                    await self.computer.type_text(params.get("app", ""))
+                    await asyncio.sleep(0.3)
+                    await self.computer.press_key("enter")
+                else:
+                    await self.computer.type_text(params.get("app", ""))
+                return f"Launched: {params.get('app')}"
+
+            elif action == "done":
+                return params.get("result", "Task completed")
+
+            else:
+                return f"Unknown action: {action}"
+
+        except Exception as e:
+            return f"Action failed: {e}"
 
     async def run(
         self,
         task: str,
         verbose: bool | None = None,
     ) -> AsyncIterator[AgentStep]:
-        """Run a task and yield steps as they complete.
-
-        Args:
-            task: Natural language task description.
-            verbose: Print steps to console. If None, uses config.
-
-        Yields:
-            AgentStep for each action taken.
-        """
+        """Run a task and yield steps as they complete."""
         if verbose is None:
             verbose = self.config.agent.verbose
 
         if not self._initialized:
             await self.initialize()
 
-        if not self._agent:
-            raise RuntimeError("Agent not initialized")
-
         step_num = 0
-        messages = [{"role": "user", "content": task}]
+        history = []
 
-        try:
-            async for result in self._agent.run(messages):
-                step_num += 1
-                step = AgentStep(step_number=step_num)
+        while step_num < self.config.agent.max_steps:
+            step_num += 1
+            step = AgentStep(step_number=step_num)
 
-                # Parse result based on Cua's output format
-                if isinstance(result, dict):
-                    step.reasoning = result.get("reasoning")
-                    step.action = result.get("action")
-                    step.action_params = result.get("params")
-                    step.result = result.get("result")
-                    step.error = result.get("error")
+            try:
+                # Take screenshot
+                screenshot = await self.computer.screenshot()
+                step.screenshot = screenshot
+
+                # Build prompt
+                if step_num == 1:
+                    prompt = f"Task: {task}\n\nHere is the current screen. What should I do first?"
                 else:
-                    step.result = result
+                    history_text = "\n".join([f"Step {h['step']}: {h['action']} -> {h['result']}" for h in history[-5:]])
+                    prompt = f"Task: {task}\n\nPrevious actions:\n{history_text}\n\nHere is the current screen. What should I do next?"
 
-                # Capture screenshot after action if configured
-                if self.config.agent.screenshot_on_step:
-                    with contextlib.suppress(Exception):
-                        step.screenshot = await self.computer.screenshot()
+                # Call Ollama
+                response = await self._call_ollama(prompt, screenshot)
+                parsed = self._parse_response(response)
+
+                step.reasoning = parsed.get("reasoning")
+                step.action = parsed.get("action")
+                step.action_params = parsed.get("params", {})
+
+                # Execute action
+                if step.action:
+                    result = await self._execute_action(step.action, step.action_params or {})
+                    step.result = result
+                    history.append({
+                        "step": step_num,
+                        "action": step.action,
+                        "result": result,
+                    })
 
                 if verbose:
                     self._print_step(step)
 
                 yield step
 
-                # Check step limit
-                if step_num >= self.config.agent.max_steps:
+                # Check if done
+                if step.action == "done":
                     break
 
-        except Exception as e:
-            error_step = AgentStep(
-                step_number=step_num + 1,
-                error=str(e),
-            )
-            if verbose:
-                self._print_step(error_step)
-            yield error_step
+                # Small delay between steps
+                await asyncio.sleep(self.config.native.screenshot_delay)
+
+            except Exception as e:
+                step.error = str(e)
+                if verbose:
+                    self._print_step(step)
+                yield step
+                break
 
     async def execute(self, task: str, verbose: bool | None = None) -> AgentResult:
-        """Execute a task and return the complete result.
-
-        Args:
-            task: Natural language task description.
-            verbose: Print steps to console.
-
-        Returns:
-            AgentResult with all steps and final answer.
-        """
+        """Execute a task and return the complete result."""
         steps = []
         last_error = None
 
@@ -218,6 +335,10 @@ class DeskPilotAgent:
         console.print(Panel(content, title=title, border_style="blue"))
 
 
+# Alias for backwards compatibility
+DeskPilotAgent = OllamaAgent
+
+
 class MockAgent:
     """Mock agent for testing without AI backend."""
 
@@ -249,6 +370,8 @@ class MockAgent:
             AgentStep(
                 step_number=3,
                 reasoning="Task appears complete",
+                action="done",
+                action_params={"result": f"Completed: {task}"},
                 result=f"Completed: {task}",
             ),
         ]
@@ -269,10 +392,10 @@ class MockAgent:
         )
 
     def _print_step(self, step: AgentStep) -> None:
-        DeskPilotAgent._print_step(self, step)
+        OllamaAgent._print_step(self, step)
 
 
-async def create_agent(mock: bool = False) -> DeskPilotAgent | MockAgent:
+async def create_agent(mock: bool = False) -> OllamaAgent | MockAgent:
     """Create and initialize an agent.
 
     Args:
@@ -288,6 +411,6 @@ async def create_agent(mock: bool = False) -> DeskPilotAgent | MockAgent:
     if mock:
         return MockAgent(computer, config)
 
-    agent = DeskPilotAgent(computer, config)
+    agent = OllamaAgent(computer, config)
     await agent.initialize()
     return agent
